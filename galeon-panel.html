@@ -1548,38 +1548,56 @@ function timerReset(zid) {
   renderKabinaDetail();
 }
 
+// Jeden wspólny interval dla paska dniówki — zamiast aktualizować go w każdym timerze osobno
+let dniowkaBarInterval = null;
+
+function startDniowkaBarTick() {
+  if (dniowkaBarInterval) return;
+  dniowkaBarInterval = setInterval(() => {
+    const k = S.kabiny.find(k=>k.id===S.activeKabinaId);
+    if (!k) return;
+    const nrZm = k.aktywnaZmiana || 1;
+    const zm = k.zmiany[nrZm];
+    const dniowkaH = zm.dniowka || 8;
+    const dniowkaSec = dniowkaH * 3600;
+    const usedSec = (zm.zadania||[]).reduce((a,z2)=>a+timerElapsed(z2),0);
+    const pct = Math.min(100,Math.round((usedSec/dniowkaSec)*100));
+    const usedH = (usedSec/3600).toFixed(1);
+    const overTime = usedSec > dniowkaSec;
+    const barColor = overTime ? 'var(--danger)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
+    const bar = document.querySelector('#kabina-dniowka [style*="height:100%"]');
+    if (bar) { bar.style.width = pct+'%'; bar.style.background = barColor; }
+    const spans = document.querySelectorAll('#kabina-dniowka strong');
+    if (spans[1]) spans[1].textContent = usedH+'h';
+  }, 1000);
+}
+
+function stopDniowkaBarTick() {
+  if (dniowkaBarInterval) { clearInterval(dniowkaBarInterval); dniowkaBarInterval = null; }
+}
+
 function startLiveTick(zid) {
   stopLiveTick(zid);
   timerIntervals[zid] = setInterval(() => {
+    // Aktualizuj tylko element timera — nie rerenderuj całej listy
     const el = document.getElementById('timer-display-'+zid);
     if (!el) { stopLiveTick(zid); return; }
     const z = findZadanie(zid);
     if (!z) { stopLiveTick(zid); return; }
     el.textContent = formatTimer(timerElapsed(z));
-    // refresh dniowka bar
-    const k = S.kabiny.find(k=>k.id===S.activeKabinaId);
-    if (k) {
-      const nrZm = k.aktywnaZmiana || 1;
-      const zm = k.zmiany[nrZm];
-      const dniowkaH = zm.dniowka || 8;
-      const dniowkaSec = dniowkaH * 3600;
-      const usedSec = (zm.zadania||[]).reduce((a,z2)=>a+timerElapsed(z2),0);
-      const pct = Math.min(100,Math.round((usedSec/dniowkaSec)*100));
-      const usedH = (usedSec/3600).toFixed(1);
-      const overTime = usedSec > dniowkaSec;
-      const barColor = overTime ? 'var(--danger)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
-      const bar = document.querySelector('#kabina-dniowka [style*="height:100%"]');
-      if (bar) { bar.style.width = pct+'%'; bar.style.background = barColor; }
-      const spans = document.querySelectorAll('#kabina-dniowka strong');
-      if (spans[1]) spans[1].textContent = usedH+'h';
-    }
   }, 1000);
+  // Uruchom wspólny interval dla paska dniówki (jeden dla wszystkich timerów)
+  startDniowkaBarTick();
 }
 
 function stopLiveTick(zid) {
   if (timerIntervals[zid]) {
     clearInterval(timerIntervals[zid]);
     delete timerIntervals[zid];
+  }
+  // Zatrzymaj pasek dniówki gdy nie ma aktywnych timerów
+  if (Object.keys(timerIntervals).length === 0) {
+    stopDniowkaBarTick();
   }
 }
 
@@ -3465,7 +3483,6 @@ function enqueueEvent(zid, typ, extraData) {
 }
 
 async function flushEventQueue() {
-  // Poprawka #2 — flaga blokująca race condition
   if (isFlushingEvents) return;
   const cfg = S.airtable;
   if (!cfg.apiKey || !cfg.baseId) return;
@@ -3480,22 +3497,11 @@ async function flushEventQueue() {
   isFlushingEvents = true;
 
   try {
-    for (const event of pending) {
-      try {
-        // Sprawdź czy Event_ID już istnieje w Airtable
-        const checkUrl = `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(EVENT_TABLE)}?filterByFormula=${encodeURIComponent(`{Event_ID}="${event.event_id}"`)}`;
-        const checkResp = await fetch(checkUrl, {
-          headers: { 'Authorization': `Bearer ${cfg.apiKey}` }
-        });
-        if (checkResp.ok) {
-          const checkData = await checkResp.json();
-          if (checkData.records && checkData.records.length > 0) {
-            event.synced = true;
-            save();
-            continue;
-          }
-        }
+    // BATCH POST — wysyłamy po 10 eventów naraz (max Airtable)
+    for (let i = 0; i < pending.length; i += 10) {
+      const batch = pending.slice(i, i + 10);
 
+      const records = batch.map(event => {
         const fields = {
           'Event_ID': event.event_id,
           'ID_Zadania': event.id_zadania,
@@ -3512,26 +3518,50 @@ async function flushEventQueue() {
         Object.keys(fields).forEach(k => {
           if (fields[k]===''||fields[k]===0||fields[k]===null) delete fields[k];
         });
+        return { fields };
+      });
 
+      try {
         const resp = await fetch(`https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(EVENT_TABLE)}`, {
           method: 'POST',
           headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields })
+          body: JSON.stringify({ records })
         });
 
         if (resp.ok) {
-          event.synced = true;
+          // Oznacz całą partię jako synced
+          batch.forEach(event => { event.synced = true; });
           save();
+        } else {
+          const errData = await resp.json().catch(()=>({}));
+          // Jeśli błąd duplikatu (422) — oznacz jako synced żeby nie blokować kolejki
+          if (resp.status === 422) {
+            batch.forEach(event => { event.synced = true; });
+            save();
+          } else {
+            break; // Inny błąd — przerwij
+          }
         }
       } catch(e) {
-        // Brak internetu — zostaw w kolejce
-        break; // Przerwij pętlę — nie ma sensu próbować kolejnych
+        break; // Brak internetu — zostaw w kolejce
       }
+
       await delay(200);
     }
   } finally {
-    isFlushingEvents = false; // Zawsze zdejmij flagę
+    isFlushingEvents = false;
+    // Wyczyść synced rekordy — zostaw tylko ostatnie 50 jako bufor diagnostyczny
+    pruneEventQueue();
   }
+}
+
+function pruneEventQueue() {
+  if (!S.eventQueue) return;
+  const unsynced = S.eventQueue.filter(e => !e.synced);
+  const synced = S.eventQueue.filter(e => e.synced);
+  // Zostaw max 50 ostatnich synced (dla diagnostyki), resztę usuń
+  S.eventQueue = unsynced.concat(synced.slice(-50));
+  save();
 }
 
 function startQueueRetry() {
@@ -4100,6 +4130,8 @@ function startApp() {
   startQueueRetry();
   // Spróbuj od razu wysłać pending eventy
   if (S.airtable?.apiKey) setTimeout(() => flushEventQueue(), 1500);
+  // Wyczyść starą kolejkę eventów przy starcie
+  setTimeout(() => pruneEventQueue(), 500);
 }
 
 // ============================================================
