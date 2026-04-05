@@ -2203,16 +2203,7 @@ function openModal(type, arg) {
           </select>
         </div>
       </div>
-      <div class="field" style="margin-top:12px">
-        <label>📷 Zdjęcie (opcjonalne)</label>
-        <input type="file" id="wyj-foto" accept="image/*"
-          style="padding:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:4px;width:100%;font-size:12px;cursor:pointer;"
-          onchange="previewWyjFoto(this)">
-        <div id="wyj-foto-preview" style="margin-top:8px;display:none;">
-          <img id="wyj-foto-img" style="max-width:100%;max-height:120px;object-fit:contain;border-radius:4px;border:1px solid var(--border);">
-          <button class="btn btn-ghost btn-sm" style="margin-top:6px;color:var(--danger)" onclick="clearWyjFoto()">✕ Usuń zdjęcie</button>
-        </div>
-      </div>`;
+`;  // foto removed
     footer.innerHTML = `
       <button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
       ${isEdit ? `<button class="btn btn-ghost" onclick="deleteWyjasnienie('${k?.id}',${(k?.wyjasnienia||[]).findIndex(w=>w.id===arg)})">Usuń</button>` : ''}
@@ -2945,7 +2936,7 @@ function renderWyjasnienia(k) {
           ${wyjasnione ? '<span class="badge badge-wyjasnione">✓ Wyjaśnione</span>' : ''}
         </div>
         <div class="wyj-tekst">${esc(w.tekst)}</div>
-        ${w.foto ? `<img src="${w.foto}" style="max-width:100%;max-height:120px;border-radius:4px;border:1px solid var(--border);margin-top:6px;cursor:pointer;" onclick="openFotoModal('${w.id}','${k.id}')">` : ''}
+
         <div class="wyj-meta">${dateStr}</div>
       </div>
       <div class="wyj-actions">
@@ -2995,10 +2986,6 @@ function saveWyjasnienie() {
   if (!k) return;
   if (!k.wyjasnienia) k.wyjasnienia = [];
 
-  // Pobierz zdjęcie jeśli jest
-  const fotoInput = document.getElementById('wyj-foto');
-  const fotoFile = fotoInput?.files?.[0] || null;
-
   const wpis = {
     id: 'w'+(++S.nextId),
     tekst,
@@ -3008,27 +2995,11 @@ function saveWyjasnienie() {
     data: new Date().toISOString()
   };
 
-  if (fotoFile) {
-    // Odczytaj zdjęcie jako base64 i zapisz lokalnie
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      wpis.foto = e.target.result; // base64 data URL
-      wpis.fotoNazwa = fotoFile.name;
-      wpis.fotoTyp = fotoFile.type;
-      k.wyjasnienia.unshift(wpis);
-      save(); closeModal();
-      renderWyjasnienia(k);
-      renderKabinyGrid();
-      toast('Wpis dodany ze zdjęciem ✓', 'success');
-    };
-    reader.readAsDataURL(fotoFile);
-  } else {
-    k.wyjasnienia.unshift(wpis);
-    save(); closeModal();
-    renderWyjasnienia(k);
-    renderKabinyGrid();
-    toast('Wpis dodany ✓', 'success');
-  }
+  k.wyjasnienia.unshift(wpis);
+  save(); closeModal();
+  renderWyjasnienia(k);
+  renderKabinyGrid();
+  toast('Wpis dodany ✓', 'success');
 }
 
 function toggleWyjasnienie(kid, idx) {
