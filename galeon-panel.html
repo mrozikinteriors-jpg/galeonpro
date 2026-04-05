@@ -2202,6 +2202,16 @@ function openModal(type, arg) {
             <option value="pilne" ${w?.priorytet==='pilne'?'selected':''}>🔴 Pilne</option>
           </select>
         </div>
+      </div>
+      <div class="field" style="margin-top:12px">
+        <label>📷 Zdjęcie (opcjonalne)</label>
+        <input type="file" id="wyj-foto" accept="image/*" capture="environment"
+          style="padding:8px;background:var(--bg);border:1.5px solid var(--border);border-radius:4px;width:100%;font-size:12px;cursor:pointer;"
+          onchange="previewWyjFoto(this)">
+        <div id="wyj-foto-preview" style="margin-top:8px;display:none;">
+          <img id="wyj-foto-img" style="max-width:100%;max-height:200px;border-radius:4px;border:1px solid var(--border);">
+          <button class="btn btn-ghost btn-sm" style="margin-top:6px;color:var(--danger)" onclick="clearWyjFoto()">✕ Usuń zdjęcie</button>
+        </div>
       </div>`;
     footer.innerHTML = `
       <button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
@@ -2935,6 +2945,7 @@ function renderWyjasnienia(k) {
           ${wyjasnione ? '<span class="badge badge-wyjasnione">✓ Wyjaśnione</span>' : ''}
         </div>
         <div class="wyj-tekst">${esc(w.tekst)}</div>
+        ${w.foto ? `<img src="${w.foto}" style="max-width:100%;max-height:120px;border-radius:4px;border:1px solid var(--border);margin-top:6px;cursor:pointer;" onclick="openFotoModal('${w.id}','${k.id}')">` : ''}
         <div class="wyj-meta">${dateStr}</div>
       </div>
       <div class="wyj-actions">
@@ -2948,25 +2959,76 @@ function renderWyjasnienia(k) {
   }).join('');
 }
 
+
+function openFotoModal(wid, kid) {
+  const k = S.kabiny.find(k=>k.id===kid);
+  const w = (k?.wyjasnienia||[]).find(w=>w.id===wid);
+  if (!w?.foto) return;
+  const overlay = document.createElement('div');
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.9);z-index:9999;display:flex;align-items:center;justify-content:center;padding:16px;';
+  overlay.onclick = () => document.body.removeChild(overlay);
+  overlay.innerHTML = `<img src="${w.foto}" style="max-width:100%;max-height:100%;border-radius:4px;">`;
+  document.body.appendChild(overlay);
+}
+
+function previewWyjFoto(input) {
+  const file = input.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    document.getElementById('wyj-foto-img').src = e.target.result;
+    document.getElementById('wyj-foto-preview').style.display = 'block';
+  };
+  reader.readAsDataURL(file);
+}
+
+function clearWyjFoto() {
+  document.getElementById('wyj-foto').value = '';
+  document.getElementById('wyj-foto-preview').style.display = 'none';
+  document.getElementById('wyj-foto-img').src = '';
+}
+
 function saveWyjasnienie() {
   const tekst = document.getElementById('wyj-tekst')?.value.trim();
   if (!tekst) { toast('Opisz problem lub pytanie', 'error'); return; }
   const k = S.kabiny.find(k=>k.id===S.activeKabinaId);
   if (!k) return;
   if (!k.wyjasnienia) k.wyjasnienia = [];
-  k.wyjasnienia.unshift({
+
+  // Pobierz zdjęcie jeśli jest
+  const fotoInput = document.getElementById('wyj-foto');
+  const fotoFile = fotoInput?.files?.[0] || null;
+
+  const wpis = {
     id: 'w'+(++S.nextId),
     tekst,
     kategoria: document.getElementById('wyj-kat')?.value || 'Do wyjaśnienia / doprecyzowania',
     priorytet: document.getElementById('wyj-prior')?.value || 'normalny',
     status: 'otwarte',
     data: new Date().toISOString()
-  });
-  save(); closeModal();
-  renderWyjasnienia(k);
-  // Update kabina grid indicator
-  renderKabinyGrid();
-  toast('Wpis dodany ✓', 'success');
+  };
+
+  if (fotoFile) {
+    // Odczytaj zdjęcie jako base64 i zapisz lokalnie
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      wpis.foto = e.target.result; // base64 data URL
+      wpis.fotoNazwa = fotoFile.name;
+      wpis.fotoTyp = fotoFile.type;
+      k.wyjasnienia.unshift(wpis);
+      save(); closeModal();
+      renderWyjasnienia(k);
+      renderKabinyGrid();
+      toast('Wpis dodany ze zdjęciem ✓', 'success');
+    };
+    reader.readAsDataURL(fotoFile);
+  } else {
+    k.wyjasnienia.unshift(wpis);
+    save(); closeModal();
+    renderWyjasnienia(k);
+    renderKabinyGrid();
+    toast('Wpis dodany ✓', 'success');
+  }
 }
 
 function toggleWyjasnienie(kid, idx) {
@@ -3003,6 +3065,10 @@ async function sendWyjasnienia() {
       // Linked record — Kabina
       const kabinaId = S._linkedIds?.kabiny?.[k.name];
       if (kabinaId) fields['Kabina'] = [kabinaId];
+      // Zdjęcie — base64 jako URL do Airtable attachment
+      if (w.foto) {
+        fields['Zdjecia'] = [{ url: w.foto, filename: w.fotoNazwa || 'zdjecie.jpg' }];
+      }
       entries.push(fields);
     });
   });
