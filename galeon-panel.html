@@ -3060,7 +3060,7 @@ async function sendWyjasnienia() {
         'Priorytet': { pilne: 'Pilne', wysoki: 'Wysoki', normalny: 'Normalny' }[w.priorytet] || 'Normalny',
         'Status': 'Otwarte',
         'Jacht': S.yacht.model + ' nr ' + S.yacht.nr,
-        'Data zgloszenia': w.data ? w.data.split('T')[0] : new Date().toISOString().split('T')[0],
+        // Data zgloszenia = createdTime (automatyczne w Airtable — nie wysyłamy)
       };
       // Linked record — Kabina
       const kabinaId = S._linkedIds?.kabiny?.[k.name];
