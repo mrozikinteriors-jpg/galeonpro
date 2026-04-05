@@ -3051,40 +3051,48 @@ async function sendWyjasnienia() {
   if (!cfg.apiKey || !cfg.baseId) { toast('Uzupełnij konfigurację Airtable', 'error'); return; }
   if (!S.yacht) { toast('Brak aktywnego jachtu', 'error'); return; }
   const tableName = 'Lista_Wyjasnienia';
-  const entries = [];
 
+  // Zbierz wpisy z referencją do lokalnego obiektu (żeby zapisać _airtableId)
+  const wpisy = [];
   S.kabiny.forEach(k => {
     (k.wyjasnienia||[]).filter(w => w.status !== 'wyjasnione').forEach(w => {
-      const fields = {
-        'Temat': w.tekst,
-        'Priorytet': { pilne: 'Pilne', wysoki: 'Wysoki', normalny: 'Normalny' }[w.priorytet] || 'Normalny',
-        'Status': 'Otwarte',
-        'Jacht': S.yacht.model + ' nr ' + S.yacht.nr,
-        // Data zgloszenia = createdTime (automatyczne w Airtable — nie wysyłamy)
-      };
-      // Linked record — Kabina
-      const kabinaId = S._linkedIds?.kabiny?.[k.name];
-      if (kabinaId) fields['Kabina'] = [kabinaId];
-      // Zdjęcie — base64 jako URL do Airtable attachment
-      if (w.foto) {
-        fields['Zdjecia'] = [{ url: w.foto, filename: w.fotoNazwa || 'zdjecie.jpg' }];
-      }
-      entries.push(fields);
+      wpisy.push({ w, k });
     });
   });
 
-  if (entries.length === 0) { toast('Brak otwartych wpisów do wysłania', 'error'); return; }
+  if (wpisy.length === 0) { toast('Brak otwartych wpisów do wysłania', 'error'); return; }
   const btn = document.getElementById('wyj-send-btn');
   if (btn) { btn.disabled = true; btn.textContent = 'Wysyłanie...'; }
   let ok = 0, err = 0, lastErr = '';
-  for (const fields of entries) {
+
+  for (const { w, k } of wpisy) {
+    const fields = {
+      'Temat': w.tekst,
+      'Priorytet': { pilne: 'Pilne', wysoki: 'Wysoki', normalny: 'Normalny' }[w.priorytet] || 'Normalny',
+      'Status': 'Otwarte',
+      'Jacht': S.yacht.model + ' nr ' + S.yacht.nr,
+    };
+    const kabinaId = S._linkedIds?.kabiny?.[k.name];
+    if (kabinaId) fields['Kabina'] = [kabinaId];
+
     try {
-      const resp = await fetch(`https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}`, {
-        method: 'POST',
+      // Jeśli mamy _airtableId — PATCH (aktualizuj), jeśli nie — POST (utwórz)
+      const method = w._airtableId ? 'PATCH' : 'POST';
+      const url = w._airtableId
+        ? `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}/${w._airtableId}`
+        : `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}`;
+
+      const resp = await fetch(url, {
+        method,
         headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields })
       });
-      if (resp.ok) { ok++; } else {
+      if (resp.ok) {
+        const data = await resp.json();
+        // Zapisz _airtableId żeby następne wywołanie użyło PATCH
+        if (!w._airtableId) { w._airtableId = data.id; }
+        ok++;
+      } else {
         const e = await resp.json();
         lastErr = e.error?.message || resp.status;
         err++;
@@ -3092,6 +3100,8 @@ async function sendWyjasnienia() {
     } catch(e) { err++; lastErr = e.message; }
     await delay(150);
   }
+
+  save(); // Zapisz lokalnie z nowymi _airtableId
   if (btn) { btn.disabled = false; btn.textContent = '↑ Wyślij listę do Airtable'; }
   if (err > 0) {
     toast(`Błąd: ${lastErr}`, 'error');
