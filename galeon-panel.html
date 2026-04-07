@@ -2204,38 +2204,32 @@ function openModal(type, arg) {
     const z = findZadanie(arg);
     if (!z) return;
     title.textContent = '🚫 Blokada zadania';
-    body.innerHTML = `
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Zadanie: <strong style="color:var(--text)">${esc(z?.nazwa||'')}</strong></div>
-      <div class="field" style="margin-bottom:12px">
-        <label>Powód blokady</label>
-        <select id="m-blokada-powod" onchange="toggleBlokadaOpis(this.value)">
-          <option value="">— wybierz —</option>
-          <option value="Brak materiału" ${z?.blokada?.startsWith('Brak materiału')?'selected':''}>Brak materiału</option>
-          <option value="Słaba jakość" ${z?.blokada?.startsWith('Słaba jakość')?'selected':''}>Słaba jakość</option>
-          <option value="Oczekiwanie na decyzję" ${z?.blokada?.startsWith('Oczekiwanie na decyzję')?'selected':''}>Oczekiwanie na decyzję</option>
-          <option value="Oczekiwanie na inny dział" ${z?.blokada?.startsWith('Oczekiwanie na inny dział')?'selected':''}>Oczekiwanie na inny dział</option>
-          <option value="Brak pracownika" ${z?.blokada?.startsWith('Brak pracownika')?'selected':''}>Brak pracownika</option>
-          <option value="Inne" ${z?.blokada?.startsWith('Inne')?'selected':''}>Inne</option>
-        </select>
-      </div>
-      <div class="field" id="blokada-opis-wrap" style="display:${z?.blokada?'block':'none'}">
-        <label>Szczegóły (opcjonalnie)</label>
-        <input id="m-blokada-opis" placeholder="np. brakuje śrub M6, czekamy na projekt X..." value="${esc(z?.blokadaOpis||'')}">
-      </div>`;
-    // Ustaw aktualną wartość selecta
-    setTimeout(() => {
-      const sel = document.getElementById('m-blokada-powod');
-      if (sel && z?.blokada) {
-        const found = [...sel.options].find(o => z.blokada.startsWith(o.value) && o.value);
-        if (found) sel.value = found.value;
-        document.getElementById('blokada-opis-wrap').style.display = 'block';
-      }
-    }, 0);
-    footer.innerHTML = \`
-      <button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
-      \${z?.blokada ? '<button class="btn btn-ghost" onclick="clearBlokada(\''+arg+'\')">Usuń blokadę</button>' : ''}
-      <button class="btn btn-secondary" onclick="saveBlokada('${arg}')">🚫 Zapisz blokadę</button>\`;
+    const currentPowod = z?.blokada || '';
+    const currentOpis = z?.blokadaOpis || '';
+    body.innerHTML =
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Zadanie: <strong style="color:var(--text)">' + esc(z?.nazwa||'') + '</strong></div>' +
+      '<div class="field" style="margin-bottom:12px">' +
+        '<label>Powód blokady</label>' +
+        '<select id="m-blokada-powod" onchange="toggleBlokadaOpis(this.value)">' +
+          '<option value="">— wybierz —</option>' +
+          '<option value="Brak materiału"' + (currentPowod==='Brak materiału'?' selected':'') + '>Brak materiału</option>' +
+          '<option value="Słaba jakość"' + (currentPowod==='Słaba jakość'?' selected':'') + '>Słaba jakość</option>' +
+          '<option value="Oczekiwanie na decyzję"' + (currentPowod==='Oczekiwanie na decyzję'?' selected':'') + '>Oczekiwanie na decyzję</option>' +
+          '<option value="Oczekiwanie na inny dział"' + (currentPowod==='Oczekiwanie na inny dział'?' selected':'') + '>Oczekiwanie na inny dział</option>' +
+          '<option value="Brak pracownika"' + (currentPowod==='Brak pracownika'?' selected':'') + '>Brak pracownika</option>' +
+          '<option value="Inne"' + (currentPowod==='Inne'?' selected':'') + '>Inne</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="field" id="blokada-opis-wrap" style="display:' + (currentPowod ? 'block' : 'none') + '">' +
+        '<label>Szczegóły (opcjonalnie)</label>' +
+        '<input id="m-blokada-opis" placeholder="np. brakuje śrub M6, czekamy na projekt X..." value="' + esc(currentOpis) + '">' +
+      '</div>';
+    footer.innerHTML =
+      '<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>' +
+      (z?.blokada ? '<button class="btn btn-ghost" onclick="clearBlokada(\'' + arg + '\')">Usuń blokadę</button>' : '') +
+      '<button class="btn btn-secondary" onclick="saveBlokada(\'' + arg + '\')">🚫 Zapisz blokadę</button>';
   }
+
 
   else if (type === 'add-wyjasnienie' || type === 'edit-wyjasnienie') {
     const isEdit = type === 'edit-wyjasnienie';
