@@ -1383,26 +1383,35 @@ function renderKabinaDetail() {
     </div>`;
 
   // Dniowka bar
-  const dniowkaH = zm.dniowka || 8;
-  const dniowkaSec = dniowkaH * 3600;
+  const BAZA_H = 8;
+  const dniowkaH = zm.dniowka || BAZA_H;
+  const nadgodzinyH = zm.nadgodziny || 0;
+  const limitH = dniowkaH + nadgodzinyH;
+  const dniowkaSec = limitH * 3600;
   const usedSec = (zm.zadania||[]).reduce((a, z) => a + timerElapsed(z), 0);
   const pct = Math.min(100, Math.round((usedSec / dniowkaSec) * 100));
   const usedH = (usedSec / 3600).toFixed(1);
-  const overTime = usedSec > dniowkaSec;
-  const barColor = overTime ? 'var(--danger)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
+  const overStandard = usedSec > (BAZA_H * 3600);
+  const overLimit = usedSec > dniowkaSec;
+  const barColor = overLimit ? 'var(--danger)' : overStandard ? 'var(--accent2)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
   const dniowkaEl = document.getElementById('kabina-dniowka');
   if (dniowkaEl) {
     dniowkaEl.innerHTML = `
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:6px">
         <div style="font-size:11px;color:var(--muted)">
-          Zmiana ${nrZm} · Dniówka: <strong style="color:var(--text)">${dniowkaH}h</strong>
-          · Wykorzystano: <strong style="color:${barColor}">${usedH}h</strong>
-          ${overTime ? '<span style="color:var(--danger);font-weight:700"> · NADGODZINY</span>' : ''}
+          Zmiana ${nrZm} · Baza: <strong style="color:var(--text)">${BAZA_H}h</strong>
+          ${nadgodzinyH > 0 ? ' + <strong style="color:var(--accent2)">'+nadgodzinyH+'h OT</strong>' : ''}
+          · Czas: <strong style="color:${barColor}">${usedH}h</strong>
+          ${overLimit ? '<span style="color:var(--danger);font-weight:700"> · PRZEKROCZONO LIMIT</span>' : overStandard ? '<span style="color:var(--accent2);font-weight:700"> · NADGODZINY</span>' : ''}
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="openModal('set-dniowka','${k.id}')">✏ Dniówka</button>
+        <div style="display:flex;gap:6px;">
+          <button class="btn btn-ghost btn-sm" onclick="openModal('set-nadgodziny','${k.id}')">⏰ OT</button>
+          <button class="btn btn-ghost btn-sm" onclick="openModal('set-dniowka','${k.id}')">✏ Dniówka</button>
+        </div>
       </div>
-      <div style="background:var(--border);border-radius:3px;height:8px;overflow:hidden">
+      <div style="background:var(--border);border-radius:3px;height:8px;overflow:hidden;position:relative;">
         <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .4s"></div>
+        ${nadgodzinyH > 0 ? '<div style="position:absolute;top:0;left:'+ Math.round((BAZA_H/limitH)*100) +'%;width:2px;height:100%;background:var(--accent2);opacity:0.7;"></div>' : ''}
       </div>`;
   }
 
@@ -1558,17 +1567,23 @@ function startDniowkaBarTick() {
     if (!k) return;
     const nrZm = k.aktywnaZmiana || 1;
     const zm = k.zmiany[nrZm];
-    const dniowkaH = zm.dniowka || 8;
-    const dniowkaSec = dniowkaH * 3600;
+    const BAZA_H = 8;
+    const dniowkaH = zm.dniowka || BAZA_H;
+    const nadgodzinyH = zm.nadgodziny || 0;
+    const limitH = dniowkaH + nadgodzinyH;
+    const dniowkaSec = limitH * 3600;
     const usedSec = (zm.zadania||[]).reduce((a,z2)=>a+timerElapsed(z2),0);
     const pct = Math.min(100,Math.round((usedSec/dniowkaSec)*100));
     const usedH = (usedSec/3600).toFixed(1);
-    const overTime = usedSec > dniowkaSec;
-    const barColor = overTime ? 'var(--danger)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
+    const overStandard = usedSec > (BAZA_H * 3600);
+    const overLimit = usedSec > dniowkaSec;
+    const barColor = overLimit ? 'var(--danger)' : overStandard ? 'var(--accent2)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
     const bar = document.querySelector('#kabina-dniowka [style*="height:100%"]');
     if (bar) { bar.style.width = pct+'%'; bar.style.background = barColor; }
-    const spans = document.querySelectorAll('#kabina-dniowka strong');
-    if (spans[1]) spans[1].textContent = usedH+'h';
+    const strongs = document.querySelectorAll('#kabina-dniowka strong');
+    // Znajdź strong z czasem wykorzystanym (ostatni strong w divie)
+    if (strongs.length >= 2) strongs[strongs.length-1].textContent = usedH+'h';
+    if (strongs[strongs.length-1]) strongs[strongs.length-1].style.color = barColor;
   }, 1000);
 }
 
@@ -2185,6 +2200,28 @@ function openModal(type, arg) {
       <button class="btn btn-primary" onclick="saveDniowka('${arg}')">Zapisz</button>`;
   }
 
+  else if (type === 'set-nadgodziny') {
+    const k = S.kabiny.find(k=>k.id===arg);
+    if (!k) return;
+    const nrZm = k.aktywnaZmiana || 1;
+    const current = k.zmiany[nrZm].nadgodziny || 0;
+    title.textContent = '⏰ Nadgodziny — ' + (k?.name || '');
+    body.innerHTML =
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Ile nadgodzin zaplanowano dla Zmiany ' + nrZm + '? Pasek dniówki będzie liczył 8h + nadgodziny.</div>' +
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">' +
+        [0,1,2,3,4,5,6].map(h =>
+          '<button type="button" class="dniowka-preset ' + (current==h?'active':'') + '" onclick="selectNadgodzinyPreset(' + h + ')">' + (h===0?'Brak':h+'h') + '</button>'
+        ).join('') +
+      '</div>' +
+      '<div class="field">' +
+        '<label>Lub wpisz własną wartość (godziny)</label>' +
+        '<input id="m-nadgodziny" type="number" min="0" max="12" step="0.5" value="' + current + '" placeholder="0">' +
+      '</div>';
+    footer.innerHTML =
+      '<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>' +
+      '<button class="btn btn-secondary" onclick="saveNadgodziny(\'' + arg + '\')">⏰ Zapisz nadgodziny</button>';
+  }
+
   else if (type === 'report-problem') {
     const z = findZadanie(arg);
     title.textContent = '⚠ Zgłoś problem';
@@ -2628,6 +2665,35 @@ function togglePauseOther(val) {
 function selectDniowkaPreset(h) {
   document.getElementById('m-dniowka').value = h;
   document.querySelectorAll('.dniowka-preset').forEach(b => b.classList.toggle('active', parseInt(b.textContent)==h));
+}
+
+
+function selectNadgodzinyPreset(h) {
+  document.getElementById('m-nadgodziny').value = h;
+  document.querySelectorAll('.dniowka-preset').forEach(b => {
+    const label = b.textContent.trim();
+    const val = label === 'Brak' ? 0 : parseInt(label);
+    b.classList.toggle('active', val === h);
+  });
+}
+
+function saveNadgodziny(kid) {
+  const k = S.kabiny.find(k=>k.id===kid);
+  if (!k) return;
+  const val = parseFloat(document.getElementById('m-nadgodziny')?.value) || 0;
+  if (val < 0 || val > 12) { toast('Podaj wartość od 0 do 12h', 'error'); return; }
+  const nrZm = k.aktywnaZmiana || 1;
+  k.zmiany[nrZm].nadgodziny = val;
+  save(); closeModal(); renderKabinaDetail();
+  toast(val > 0 ? `⏰ Nadgodziny Zmiany ${nrZm}: +${val}h` : 'Nadgodziny usunięte');
+  // Synchronizuj do Airtable — pole Nadgodziny w tabeli Kabiny
+  if (S.airtable?.apiKey && S.airtable?.baseId && k._airtableId) {
+    fetch(`https://api.airtable.com/v0/${S.airtable.baseId}/Kabiny/${k._airtableId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${S.airtable.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { 'Nadgodziny': val } })
+    }).catch(() => {});
+  }
 }
 
 function saveDniowka(kid) {
