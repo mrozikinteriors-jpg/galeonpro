@@ -3514,19 +3514,17 @@ async function sendZespolToAirtable() {
   const tableName = 'Obecnosc_Oceny';
   let ok = 0, err = 0, lastErr = '';
 
-  // Wyślij obecność
+  // Wyślij obecność — pola zgodne z tabelą Obecnosc_Oceny
   for (const w of S.workers) {
     const a = att[w] || {};
+    // Linked record — Pracownik (wymaga Record ID z tabeli Zespol)
+    const pracownikId = S._linkedIds?.zespol?.[w];
     const fields = {
-      'Typ': 'Obecnosc',
-      'Pracownik': w,
       'Data': today,
       'Jacht': S.yacht?.model || '',
-      'Numer Prototypu': S.yacht?.nr || '',
-      'Status obecnosci': {present:'Obecny',late:'Spoznie',absent:'Nieobecny'}[a.status] || 'Nie zarejestrowano',
-      'Przyczyna': a.reason || '',
-      'Notatka': a.note || ''
+      'Status obecnosci': {present:'Obecny', late:'Spoźnienie', absent:'Nieobecny'}[a.status] || 'Nie zarejestrowano',
     };
+    if (pracownikId) fields['Pracownik'] = [pracownikId];
     Object.keys(fields).forEach(k => { if (fields[k]==='') delete fields[k]; });
     try {
       const resp = await fetch(`https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}`, {
@@ -3539,40 +3537,37 @@ async function sendZespolToAirtable() {
     await delay(150);
   }
 
-  // Wyślij oceny
+  // Wyślij oceny — tylko dzisiejsze, pola zgodne z tabelą
   if (S.oceny) {
     for (const [worker, daty] of Object.entries(S.oceny)) {
-      for (const [date, ocena] of Object.entries(daty)) {
-        const vals = Object.values(ocena).filter(v=>v>0);
-        if (vals.length === 0) continue;
-        const avg = (vals.reduce((a,b)=>a+b,0)/vals.length).toFixed(2);
-        const fields = {
-          'Typ': 'Ocena dzienna',
-          'Pracownik': worker,
-          'Data': date,
-          'Jacht': S.yacht?.model || '',
-          'Numer Prototypu': S.yacht?.nr || '',
-          'Punktualnosc': ocena.punktualnosc || 0,
-          'Zaangazowanie': ocena.zaangazowanie || 0,
-          'Czystosc stanowiska': ocena.czystosc || 0,
-          'Team player': ocena.team_player || 0,
-          'Jakosc wykonania': ocena.jakosc || 0,
-          'Szybkosc pracy': ocena.szybkosc || 0,
-          'Samodzielnosc': ocena.samodzielnosc || 0,
-          'Komunikacja': ocena.komunikacja || 0,
-          'Srednia': parseFloat(avg)
-        };
-        Object.keys(fields).forEach(k => { if (fields[k]===0||fields[k]==='') delete fields[k]; });
-        try {
-          const resp = await fetch(`https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}`, {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fields })
-          });
-          if (resp.ok) ok++; else { const e=await resp.json(); lastErr=e.error?.message||resp.status; err++; }
-        } catch(e) { err++; lastErr=e.message; }
-        await delay(150);
-      }
+      const ocena = daty[today];
+      if (!ocena) continue;
+      const vals = Object.values(ocena).filter(v=>v>0);
+      if (vals.length === 0) continue;
+      const pracownikId = S._linkedIds?.zespol?.[worker];
+      const fields = {
+        'Data': today,
+        'Jacht': S.yacht?.model || '',
+        'Punktualnosc': ocena.punktualnosc || 0,
+        'Zaangazowanie': ocena.zaangazowanie || 0,
+        'Czystosc': ocena.czystosc || 0,
+        'Team player': ocena.team_player || 0,
+        'Jakosc wykonania': ocena.jakosc || 0,
+        'Szybkosc pracy': ocena.szybkosc || 0,
+        'Samodzielnosc': ocena.samodzielnosc || 0,
+        'Komunikacja': ocena.komunikacja || 0,
+      };
+      if (pracownikId) fields['Pracownik'] = [pracownikId];
+      Object.keys(fields).forEach(k => { if (fields[k]===0||fields[k]==='') delete fields[k]; });
+      try {
+        const resp = await fetch(`https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}`, {
+          method: 'POST',
+          headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields })
+        });
+        if (resp.ok) ok++; else { const e=await resp.json(); lastErr=e.error?.message||resp.status; err++; }
+      } catch(e) { err++; lastErr=e.message; }
+      await delay(150);
     }
   }
 
