@@ -3522,8 +3522,11 @@ async function sendZespolToAirtable() {
     const fields = {
       'Data': today,
       'Jacht': S.yacht?.model || '',
-      'Status obecnosci': {present:'Obecny', late:'Spoźnienie', absent:'Nieobecny'}[a.status] || 'Nie zarejestrowano',
     };
+    // Nie wysyłaj jeśli brak statusu obecności
+    const statusMap = {present:'Obecny', late:'Spoźnienie', absent:'Nieobecny'};
+    if (!statusMap[a.status]) { continue; }
+    fields['Status obecnosci'] = statusMap[a.status];
     if (pracownikId) fields['Pracownik'] = [pracownikId];
     Object.keys(fields).forEach(k => { if (fields[k]==='') delete fields[k]; });
     try {
