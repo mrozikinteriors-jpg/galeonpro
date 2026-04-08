@@ -1388,7 +1388,8 @@ function renderKabinaDetail() {
   const nadgodzinyH = zm.nadgodziny || 0;
   const limitH = dniowkaH + nadgodzinyH;
   const dniowkaSec = limitH * 3600;
-  const usedSec = (zm.zadania||[]).reduce((a, z) => a + timerElapsed(z), 0);
+  // Pasek dniówki: tylko zadania aktualnie tykające (timerStart != null)
+  const usedSec = (zm.zadania||[]).filter(z => z.timerStart).reduce((a, z) => a + timerElapsed(z), 0);
   const pct = Math.min(100, Math.round((usedSec / dniowkaSec) * 100));
   const usedH = (usedSec / 3600).toFixed(1);
   const overStandard = usedSec > (BAZA_H * 3600);
@@ -1572,7 +1573,7 @@ function startDniowkaBarTick() {
     const nadgodzinyH = zm.nadgodziny || 0;
     const limitH = dniowkaH + nadgodzinyH;
     const dniowkaSec = limitH * 3600;
-    const usedSec = (zm.zadania||[]).reduce((a,z2)=>a+timerElapsed(z2),0);
+    const usedSec = (zm.zadania||[]).filter(z2 => z2.timerStart).reduce((a,z2)=>a+timerElapsed(z2),0);
     const pct = Math.min(100,Math.round((usedSec/dniowkaSec)*100));
     const usedH = (usedSec/3600).toFixed(1);
     const overStandard = usedSec > (BAZA_H * 3600);
