@@ -3514,66 +3514,63 @@ async function sendZespolToAirtable() {
   const tableName = 'Obecnosc_Oceny';
   let ok = 0, err = 0, lastErr = '';
 
-  // Wyślij obecność — pola zgodne z tabelą Obecnosc_Oceny
+  // Klucz lokalny do przechowania _airtableId per pracownik per dzień
+  if (!S._obecnoscIds) S._obecnoscIds = {};
+  if (!S._obecnoscIds[today]) S._obecnoscIds[today] = {};
+
+  const statusMap = {present:'Obecny', late:'Spoźnienie', absent:'Nieobecny'};
+
+  // Wyślij obecność — jeden rekord per pracownik per dzień (PATCH jeśli istnieje)
   for (const w of S.workers) {
     const a = att[w] || {};
-    // Linked record — Pracownik (wymaga Record ID z tabeli Zespol)
+    if (!statusMap[a.status]) continue; // Pomiń bez statusu
+
     const pracownikId = S._linkedIds?.zespol?.[w];
+    const existingId = S._obecnoscIds[today][w] || null;
+
+    // Pobierz oceny dzisiejsze jeśli są
+    const ocena = S.oceny?.[w]?.[today] || {};
     const fields = {
       'Data': today,
       'Jacht': S.yacht?.model || '',
+      'Status obecnosci': statusMap[a.status],
     };
-    // Nie wysyłaj jeśli brak statusu obecności
-    const statusMap = {present:'Obecny', late:'Spoźnienie', absent:'Nieobecny'};
-    if (!statusMap[a.status]) { continue; }
-    fields['Status obecnosci'] = statusMap[a.status];
     if (pracownikId) fields['Pracownik'] = [pracownikId];
-    Object.keys(fields).forEach(k => { if (fields[k]==='') delete fields[k]; });
+    // Dodaj oceny jeśli są
+    if (ocena.punktualnosc) fields['Punktualnosc'] = ocena.punktualnosc;
+    if (ocena.zaangazowanie) fields['Zaangazowanie'] = ocena.zaangazowanie;
+    if (ocena.czystosc) fields['Czystosc'] = ocena.czystosc;
+    if (ocena.team_player) fields['Team player'] = ocena.team_player;
+    if (ocena.jakosc) fields['Jakosc wykonania'] = ocena.jakosc;
+    if (ocena.szybkosc) fields['Szybkosc pracy'] = ocena.szybkosc;
+    if (ocena.samodzielnosc) fields['Samodzielnosc'] = ocena.samodzielnosc;
+    if (ocena.komunikacja) fields['Komunikacja'] = ocena.komunikacja;
+
+    const method = existingId ? 'PATCH' : 'POST';
+    const url = existingId
+      ? `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}/${existingId}`
+      : `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}`;
+
     try {
-      const resp = await fetch(`https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}`, {
-        method: 'POST',
+      const resp = await fetch(url, {
+        method,
         headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
         body: JSON.stringify({ fields })
       });
-      if (resp.ok) ok++; else { const e=await resp.json(); lastErr=e.error?.message||resp.status; err++; }
-    } catch(e) { err++; lastErr=e.message; }
+      if (resp.ok) {
+        const data = await resp.json();
+        if (!existingId) S._obecnoscIds[today][w] = data.id;
+        ok++;
+      } else {
+        const e = await resp.json();
+        lastErr = e.error?.message || resp.status;
+        err++;
+      }
+    } catch(e) { err++; lastErr = e.message; }
     await delay(150);
   }
 
-  // Wyślij oceny — tylko dzisiejsze, pola zgodne z tabelą
-  if (S.oceny) {
-    for (const [worker, daty] of Object.entries(S.oceny)) {
-      const ocena = daty[today];
-      if (!ocena) continue;
-      const vals = Object.values(ocena).filter(v=>v>0);
-      if (vals.length === 0) continue;
-      const pracownikId = S._linkedIds?.zespol?.[worker];
-      const fields = {
-        'Data': today,
-        'Jacht': S.yacht?.model || '',
-        'Punktualnosc': ocena.punktualnosc || 0,
-        'Zaangazowanie': ocena.zaangazowanie || 0,
-        'Czystosc': ocena.czystosc || 0,
-        'Team player': ocena.team_player || 0,
-        'Jakosc wykonania': ocena.jakosc || 0,
-        'Szybkosc pracy': ocena.szybkosc || 0,
-        'Samodzielnosc': ocena.samodzielnosc || 0,
-        'Komunikacja': ocena.komunikacja || 0,
-      };
-      if (pracownikId) fields['Pracownik'] = [pracownikId];
-      Object.keys(fields).forEach(k => { if (fields[k]===0||fields[k]==='') delete fields[k]; });
-      try {
-        const resp = await fetch(`https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(tableName)}`, {
-          method: 'POST',
-          headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ fields })
-        });
-        if (resp.ok) ok++; else { const e=await resp.json(); lastErr=e.error?.message||resp.status; err++; }
-      } catch(e) { err++; lastErr=e.message; }
-      await delay(150);
-    }
-  }
-
+  save();
   btn.disabled = false; btn.textContent = '↑ Wyślij do Airtable';
   if (err > 0) { toast(`Błąd: ${lastErr}`, 'error'); logMsg(`✗ Zespół: ${lastErr}`, 'err'); }
   else { toast(`Wysłano ${ok} rekordów ✓`, 'success'); logMsg(`✓ Zespół: ${ok} rekordów`, 'ok'); }
