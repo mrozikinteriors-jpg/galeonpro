@@ -3,7 +3,7 @@
 // Obsługuje timery w tle gdy aplikacja jest zamknięta
 // ============================================================
 
-const CACHE_NAME = 'prototyp-desk-v8';
+const CACHE_NAME = 'prototyp-desk-v12';
 const FILES_TO_CACHE = [
   '/',
   '/index.html',

@@ -1382,38 +1382,49 @@ function renderKabinaDetail() {
       <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="openModal('assign-stolarz')">✏ Zmień pracowników Zmiany ${nrZm}</button>
     </div>`;
 
-  // Dniowka bar
+  // Dniowka bar z timerem
   const BAZA_H = 8;
   const dniowkaH = zm.dniowka || BAZA_H;
   const nadgodzinyH = zm.nadgodziny || 0;
   const limitH = dniowkaH + nadgodzinyH;
   const dniowkaSec = limitH * 3600;
-  // Pasek dniówki: tylko zadania aktualnie tykające (timerStart != null)
-  const usedSec = (zm.zadania||[]).filter(z => z.timerStart).reduce((a, z) => a + timerElapsed(z), 0);
-  const pct = Math.min(100, Math.round((usedSec / dniowkaSec) * 100));
-  const usedH = (usedSec / 3600).toFixed(1);
-  const overStandard = usedSec > (BAZA_H * 3600);
-  const overLimit = usedSec > dniowkaSec;
+  const dniowkaRunning = !!zm.dniowkaStart && !zm.dniowkaStop;
+  const dniowkaElapsed = zm.dniowkaStart
+    ? Math.floor(((zm.dniowkaStop ? new Date(zm.dniowkaStop) : new Date()) - new Date(zm.dniowkaStart)) / 1000)
+    : 0;
+  const overStandard = dniowkaElapsed > (BAZA_H * 3600);
+  const overLimit = dniowkaElapsed > dniowkaSec;
+  const pct = dniowkaSec > 0 ? Math.min(100, Math.round((dniowkaElapsed / dniowkaSec) * 100)) : 0;
   const barColor = overLimit ? 'var(--danger)' : overStandard ? 'var(--accent2)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
   const dniowkaEl = document.getElementById('kabina-dniowka');
   if (dniowkaEl) {
-    dniowkaEl.innerHTML = `
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:6px">
-        <div style="font-size:11px;color:var(--muted)">
-          Zmiana ${nrZm} · Baza: <strong style="color:var(--text)">${BAZA_H}h</strong>
-          ${nadgodzinyH > 0 ? ' + <strong style="color:var(--accent2)">'+nadgodzinyH+'h OT</strong>' : ''}
-          · Czas: <strong style="color:${barColor}">${usedH}h</strong>
-          ${overLimit ? '<span style="color:var(--danger);font-weight:700"> · PRZEKROCZONO LIMIT</span>' : overStandard ? '<span style="color:var(--accent2);font-weight:700"> · NADGODZINY</span>' : ''}
-        </div>
-        <div style="display:flex;gap:6px;">
-          <button class="btn btn-ghost btn-sm" onclick="openModal('set-nadgodziny','${k.id}')">⏰ OT</button>
-          <button class="btn btn-ghost btn-sm" onclick="openModal('set-dniowka','${k.id}')">✏ Dniówka</button>
-        </div>
-      </div>
-      <div style="background:var(--border);border-radius:3px;height:8px;overflow:hidden;position:relative;">
-        <div style="height:100%;width:${pct}%;background:${barColor};border-radius:3px;transition:width .4s"></div>
-        ${nadgodzinyH > 0 ? '<div style="position:absolute;top:0;left:'+ Math.round((BAZA_H/limitH)*100) +'%;width:2px;height:100%;background:var(--accent2);opacity:0.7;"></div>' : ''}
-      </div>`;
+    const startLabel = zm.dniowkaStart ? new Date(zm.dniowkaStart).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+    const _startLabel2 = zm.dniowkaStart ? new Date(zm.dniowkaStart).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}) : '--:--';
+    const _barMark = nadgodzinyH > 0 ? '<div style="position:absolute;top:0;left:'+ Math.round((BAZA_H/limitH)*100) +'%;width:2px;height:100%;background:var(--accent2);opacity:0.7;"></div>' : '';
+    const _startBtn = dniowkaRunning
+      ? '<button class="btn btn-danger btn-sm" onclick="stopDniowka(\'' + k.id + '\')">&#9632; STOP</button>'
+      : '<button class="btn btn-primary btn-sm" onclick="startDniowka(\'' + k.id + '\')">&#9654; START</button>';
+    dniowkaEl.innerHTML =
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:6px">' +
+        '<div style="font-size:11px;color:var(--muted)">' +
+          'Zmiana ' + nrZm + ' · Baza: <strong style="color:var(--text)">' + BAZA_H + 'h</strong>' +
+          (nadgodzinyH > 0 ? ' + <strong style="color:var(--accent2)">' + nadgodzinyH + 'h OT</strong>' : '') +
+          ' · Start: <strong style="color:var(--text)">' + _startLabel2 + '</strong>' +
+          ' · Czas: <strong id="dniowka-elapsed" style="color:' + barColor + '">' + formatTimer(dniowkaElapsed) + '</strong>' +
+          (overLimit ? '<span style="color:var(--danger);font-weight:700"> · PRZEKROCZONO LIMIT</span>' : overStandard ? '<span style="color:var(--accent2);font-weight:700"> · NADGODZINY</span>' : '') +
+        '</div>' +
+        '<div style="display:flex;gap:6px;">' +
+          _startBtn +
+          '<button class="btn btn-ghost btn-sm" onclick="openModal(&quot;set-nadgodziny&quot;,&quot;' + k.id + '&quot;)">&#9200; OT</button>' +
+          '<button class="btn btn-ghost btn-sm" onclick="openModal(&quot;set-dniowka&quot;,&quot;' + k.id + '&quot;)">&#9998; Dniówka</button>' +
+        '</div>' +
+      '</div>' +
+      '<div style="background:var(--border);border-radius:3px;height:8px;overflow:hidden;position:relative;">' +
+        '<div id="dniowka-bar-fill" style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:3px;transition:width .4s"></div>' +
+        _barMark +
+      '</div>';
+    // Uruchom tick dniówki jeśli trwa
+    if (dniowkaRunning) startDniowkaTick(k.id, limitH);
   }
 
   renderZadania(k);
@@ -1568,23 +1579,21 @@ function startDniowkaBarTick() {
     if (!k) return;
     const nrZm = k.aktywnaZmiana || 1;
     const zm = k.zmiany[nrZm];
+    if (!zm.dniowkaStart || zm.dniowkaStop) return;
     const BAZA_H = 8;
     const dniowkaH = zm.dniowka || BAZA_H;
     const nadgodzinyH = zm.nadgodziny || 0;
     const limitH = dniowkaH + nadgodzinyH;
     const dniowkaSec = limitH * 3600;
-    const usedSec = (zm.zadania||[]).filter(z2 => z2.timerStart).reduce((a,z2)=>a+timerElapsed(z2),0);
-    const pct = Math.min(100,Math.round((usedSec/dniowkaSec)*100));
-    const usedH = (usedSec/3600).toFixed(1);
-    const overStandard = usedSec > (BAZA_H * 3600);
-    const overLimit = usedSec > dniowkaSec;
+    const elapsed = Math.floor((Date.now() - new Date(zm.dniowkaStart)) / 1000);
+    const pct = Math.min(100, Math.round((elapsed / dniowkaSec) * 100));
+    const overStandard = elapsed > (BAZA_H * 3600);
+    const overLimit = elapsed > dniowkaSec;
     const barColor = overLimit ? 'var(--danger)' : overStandard ? 'var(--accent2)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
-    const bar = document.querySelector('#kabina-dniowka [style*="height:100%"]');
-    if (bar) { bar.style.width = pct+'%'; bar.style.background = barColor; }
-    const strongs = document.querySelectorAll('#kabina-dniowka strong');
-    // Znajdź strong z czasem wykorzystanym (ostatni strong w divie)
-    if (strongs.length >= 2) strongs[strongs.length-1].textContent = usedH+'h';
-    if (strongs[strongs.length-1]) strongs[strongs.length-1].style.color = barColor;
+    const elEl = document.getElementById('dniowka-elapsed');
+    const barFill = document.getElementById('dniowka-bar-fill');
+    if (elEl) { elEl.textContent = formatTimer(elapsed); elEl.style.color = barColor; }
+    if (barFill) { barFill.style.width = pct+'%'; barFill.style.background = barColor; }
   }, 1000);
 }
 
@@ -1752,6 +1761,7 @@ function renderZadanieRow(z) {
           </div>`).join('')}</div>` : '';
 
     const protip = hasProtip ? `<div class="zadanie-protip">💡 ${esc(z.protip)}</div>` : '';
+    const pomocnikInfo = z.pomocnikZadania ? `<div style="font-size:11px;color:var(--accent);background:var(--accent-light);border-radius:3px;padding:5px 10px;margin-top:8px;">👷 Pomocnik: <strong>${esc(z.pomocnikZadania)}</strong></div>` : '';
     const problem = hasProblem ? `<div class="zadanie-problem">${esc(z.problem)}</div>` : '';
 
     const pauseLog = hasPauzy
@@ -1774,12 +1784,14 @@ function renderZadanieRow(z) {
           <button class="btn btn-ghost btn-sm ${hasElements?'has-elements':''}" onclick="openModal('elementy','${z.id}')">📦 Elementy${hasElements?' ('+z.elementy.length+')':''}</button>
           <button class="btn ${hasProblem?'btn-danger':'btn-ghost'} btn-sm" onclick="openModal('report-problem','${z.id}')">⚠ Problem</button>
           <button class="btn ${z.blokada?'btn-secondary':'btn-ghost'} btn-sm" onclick="openModal('set-blokada','${z.id}')">🚫 Blokada${z.blokada?' ✓':''}</button>
+          <button class="btn ${z.pomocnikZadania?'btn-primary':'btn-ghost'} btn-sm" onclick="openModal('set-pomocnik-zadania','${z.id}')">👷 Pomocnik${z.pomocnikZadania?' ✓':''}</button>
           <button class="btn btn-ghost btn-sm" onclick="openModal('set-manual-time','${z.id}')" title="Ustaw czas ręcznie">⏱ Ustaw czas</button>
           <button class="btn btn-ghost btn-sm ${z.dataPlanowana?'has-elements':''}" onclick="openModal('set-data-planowana','${z.id}')" title="Ustaw datę planowaną">📅${z.dataPlanowana?' '+z.dataPlanowana:''}</button>
           <button class="btn btn-danger btn-sm" onclick="deleteZadanie('${z.id}')">✕ Usuń</button>
         </div>
         ${timerControls}
         ${elementy}
+        ${pomocnikInfo}
         ${protip}
         ${pauseLog}
         ${problem}
@@ -2136,6 +2148,7 @@ function openModal(type, arg) {
               <option value="Stolarnia">Stolarnia</option>
               <option value="Aluminium">Aluminium</option>
               <option value="Lakiernia">Lakiernia</option>
+              <option value="Laminaty">Laminaty</option>
               <option value="Tapicernia">Tapicernia</option>
               <option value="Zewnętrzny dostawca">Zewnętrzny dostawca</option>
               <option value="Inne">Inne</option>
@@ -2331,6 +2344,28 @@ function openModal(type, arg) {
       <div style="font-size:11px;color:var(--muted);margin-top:8px;">Aktualny czas: <strong>${currentMins ? currentMins+'min' : '—'}</strong></div>`;
     footer.innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
       <button class="btn btn-primary" onclick="saveManualTime('${arg}')">Zapisz czas</button>`;
+  }
+
+  else if (type === 'set-pomocnik-zadania') {
+    const z = findZadanie(arg);
+    if (!z) return;
+    const workerOptions = S.workers.map(w =>
+      '<option value="' + esc(w) + '"' + (z.pomocnikZadania===w?' selected':'') + '>' + esc(w) + '</option>'
+    ).join('');
+    title.textContent = '👷 Pomocnik zadania';
+    body.innerHTML =
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Zadanie: <strong style="color:var(--text)">' + esc(z.nazwa) + '</strong></div>' +
+      '<div class="field">' +
+        '<label>Przypisz pomocnika (oddelegowany)</label>' +
+        '<select id="m-pomocnik-zadania">' +
+          '<option value="">— brak pomocnika —</option>' +
+          workerOptions +
+        '</select>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:8px;">Pomocnik zostanie zapisany przy zadaniu i wysłany do Airtable.</div>';
+    footer.innerHTML =
+      '<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>' +
+      '<button class="btn btn-primary" onclick="savePomocnikZadania(\'' + arg + '\')">Zapisz</button>';
   }
 
   else if (type === 'set-data-planowana') {
@@ -2601,7 +2636,7 @@ async function syncElementToAirtable(zid, idx) {
     const resp = await fetch(url, {
       method,
       headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields })
+      body: JSON.stringify({ fields, typecast: true })
     });
     if (resp.ok) {
       const data = await resp.json();
@@ -2676,6 +2711,48 @@ function selectNadgodzinyPreset(h) {
     const val = label === 'Brak' ? 0 : parseInt(label);
     b.classList.toggle('active', val === h);
   });
+}
+
+
+function startDniowka(kid) {
+  const k = S.kabiny.find(k=>k.id===kid);
+  if (!k) return;
+  const nrZm = k.aktywnaZmiana || 1;
+  const zm = k.zmiany[nrZm];
+  if (zm.dniowkaStart && !zm.dniowkaStop) { toast('Dniówka już uruchomiona', 'error'); return; }
+  zm.dniowkaStart = new Date().toISOString();
+  zm.dniowkaStop = null;
+  save(); renderKabinaDetail();
+  toast('▶ Dniówka rozpoczęta', 'success');
+  startDniowkaTick(kid, (zm.dniowka||8) + (zm.nadgodziny||0));
+}
+
+function stopDniowka(kid) {
+  const k = S.kabiny.find(k=>k.id===kid);
+  if (!k) return;
+  const nrZm = k.aktywnaZmiana || 1;
+  const zm = k.zmiany[nrZm];
+  if (!zm.dniowkaStart) { toast('Dniówka nie jest uruchomiona', 'error'); return; }
+  zm.dniowkaStop = new Date().toISOString();
+  stopDniowkaTick();
+  // Zatrzymaj wszystkie aktywne zadania jak globalna pauza
+  let stopped = 0;
+  (zm.zadania||[]).forEach(z => {
+    if (z.timerStart) {
+      const elapsed = timerElapsed(z);
+      z.czasNazbierany = (z.czasNazbierany || 0) + elapsed;
+      z.timerStart = null;
+      z.status = 'todo';
+      stopLiveTick(z.id);
+      stopped++;
+    }
+  });
+  save(); renderKabinaDetail(); renderKabinyGrid();
+  toast('■ Dniówka zakończona' + (stopped > 0 ? ` · Zatrzymano ${stopped} zadań` : ''), 'success');
+}
+
+function startDniowkaTick(kid, limitH) {
+  startDniowkaBarTick();
 }
 
 function saveNadgodziny(kid) {
@@ -3067,6 +3144,27 @@ function clearBlokada(zid) {
   toast('Blokada usunięta');
 }
 
+
+function savePomocnikZadania(zid) {
+  const val = document.getElementById('m-pomocnik-zadania')?.value || '';
+  const z = findZadanie(zid);
+  if (!z) return;
+  z.pomocnikZadania = val || null;
+  save(); closeModal(); renderKabinaDetail();
+  toast(val ? `👷 Pomocnik: ${val}` : 'Pomocnik usunięty');
+  // Sync do Airtable — pole Pomocnik_Zadania (linked record)
+  const cfg = S.airtable;
+  if (cfg.apiKey && cfg.baseId && z._airtableId) {
+    const pomocnikId = S._linkedIds?.zespol?.[val];
+    const fields = pomocnikId ? { 'Pomocnik_Zadania': [pomocnikId] } : { 'Pomocnik_Zadania': [] };
+    fetch(`https://api.airtable.com/v0/${cfg.baseId}/Zadania/${z._airtableId}`, {
+      method: 'PATCH',
+      headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields })
+    }).catch(() => {});
+  }
+}
+
 function saveDataPlanowana(zid) {
   const val = document.getElementById('m-data-planowana')?.value || '';
   const z = findZadanie(zid);
@@ -3133,6 +3231,7 @@ function renderWyjasnienia(k) {
           ? `<button class="btn btn-ghost btn-sm" onclick="toggleWyjasnienie('${k.id}',${i})" title="Oznacz jako wyjaśnione">✓</button>`
           : `<button class="btn btn-ghost btn-sm" onclick="toggleWyjasnienie('${k.id}',${i})" title="Cofnij">↩</button>`
         }
+        <button class="btn btn-ghost btn-sm" onclick="openModal('edit-wyjasnienie','${w.id}')">✏</button>
         <button class="btn btn-danger btn-sm" onclick="deleteWyjasnienie('${k.id}',${i})">✕</button>
       </div>
     </div>`;
@@ -3174,6 +3273,26 @@ function saveWyjasnienie() {
   const k = S.kabiny.find(k=>k.id===S.activeKabinaId);
   if (!k) return;
   if (!k.wyjasnienia) k.wyjasnienia = [];
+
+  // Sprawdź czy to edycja (modalCtx.type === 'edit-wyjasnienie')
+  const isEdit = modalCtx?.type === 'edit-wyjasnienie';
+  const editId = modalCtx?.arg;
+
+  if (isEdit && editId) {
+    const idx = k.wyjasnienia.findIndex(w => w.id === editId);
+    if (idx >= 0) {
+      k.wyjasnienia[idx].tekst = tekst;
+      k.wyjasnienia[idx].kategoria = document.getElementById('wyj-kat')?.value || k.wyjasnienia[idx].kategoria;
+      k.wyjasnienia[idx].priorytet = document.getElementById('wyj-prior')?.value || k.wyjasnienia[idx].priorytet;
+      // Reset _airtableId żeby wymusić PATCH przy następnym wysłaniu
+      // (zostaje, PATCH zaktualizuje rekord w Airtable)
+    }
+    save(); closeModal();
+    renderWyjasnienia(k);
+    renderKabinyGrid();
+    toast('Wpis zaktualizowany ✓', 'success');
+    return;
+  }
 
   const wpis = {
     id: 'w'+(++S.nextId),
