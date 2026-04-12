@@ -417,22 +417,7 @@ body {
 .progress-seg.problem { background: var(--danger); }
 
 /* DNIOWKA PRESETS */
-.dniowka-preset {
-  padding: 6px 14px; border-radius: 4px;
-  font-family: 'Syne', sans-serif; font-size: 12px; font-weight: 700;
-  cursor: pointer; border: 1.5px solid var(--border);
-  background: var(--surface2); color: var(--muted);
-  transition: all .15s;
-}
-.dniowka-preset:hover { border-color: var(--accent); color: var(--accent); }
-.dniowka-preset.active { background: var(--accent); color: #fff; border-color: var(--accent); }
-.pause-log {
-  margin-top: 6px; font-size: 10px; color: var(--yellow);
-  background: var(--yellow-light); border: 1px solid #f0d060;
-  border-radius: 3px; padding: 5px 10px; line-height: 1.8;
-}
 
-/* ZMIANA SWITCHER */
 .zmiana-switcher {
   display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 2px;
 }
@@ -862,7 +847,6 @@ body {
     <!-- WORKER CARD -->
     <div id="kabina-worker-card"></div>
 
-    <div style="margin-top:10px;" id="kabina-dniowka"></div>
 
     <!-- LISTA DO WYJAŚNIENIA -->
     <div style="margin-top:20px;">
@@ -1382,50 +1366,6 @@ function renderKabinaDetail() {
       <button class="btn btn-primary btn-sm" style="margin-top:10px" onclick="openModal('assign-stolarz')">✏ Zmień pracowników Zmiany ${nrZm}</button>
     </div>`;
 
-  // Dniowka bar z timerem
-  const BAZA_H = 8;
-  const dniowkaH = zm.dniowka || BAZA_H;
-  const nadgodzinyH = zm.nadgodziny || 0;
-  const limitH = dniowkaH + nadgodzinyH;
-  const dniowkaSec = limitH * 3600;
-  const dniowkaRunning = !!zm.dniowkaStart && !zm.dniowkaStop;
-  const dniowkaElapsed = zm.dniowkaStart
-    ? Math.floor(((zm.dniowkaStop ? new Date(zm.dniowkaStop) : new Date()) - new Date(zm.dniowkaStart)) / 1000)
-    : 0;
-  const overStandard = dniowkaElapsed > (BAZA_H * 3600);
-  const overLimit = dniowkaElapsed > dniowkaSec;
-  const pct = dniowkaSec > 0 ? Math.min(100, Math.round((dniowkaElapsed / dniowkaSec) * 100)) : 0;
-  const barColor = overLimit ? 'var(--danger)' : overStandard ? 'var(--accent2)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
-  const dniowkaEl = document.getElementById('kabina-dniowka');
-  if (dniowkaEl) {
-    const startLabel = zm.dniowkaStart ? new Date(zm.dniowkaStart).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}) : '--:--';
-    const _startLabel2 = zm.dniowkaStart ? new Date(zm.dniowkaStart).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'}) : '--:--';
-    const _barMark = nadgodzinyH > 0 ? '<div style="position:absolute;top:0;left:'+ Math.round((BAZA_H/limitH)*100) +'%;width:2px;height:100%;background:var(--accent2);opacity:0.7;"></div>' : '';
-    const _startBtn = dniowkaRunning
-      ? '<button class="btn btn-danger btn-sm" onclick="stopDniowka(\'' + k.id + '\')">&#9632; STOP</button>'
-      : '<button class="btn btn-primary btn-sm" onclick="startDniowka(\'' + k.id + '\')">&#9654; START</button>';
-    dniowkaEl.innerHTML =
-      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;flex-wrap:wrap;gap:6px">' +
-        '<div style="font-size:11px;color:var(--muted)">' +
-          'Zmiana ' + nrZm + ' · Baza: <strong style="color:var(--text)">' + BAZA_H + 'h</strong>' +
-          (nadgodzinyH > 0 ? ' + <strong style="color:var(--accent2)">' + nadgodzinyH + 'h OT</strong>' : '') +
-          ' · Start: <strong style="color:var(--text)">' + _startLabel2 + '</strong>' +
-          ' · Czas: <strong id="dniowka-elapsed" style="color:' + barColor + '">' + formatTimer(dniowkaElapsed) + '</strong>' +
-          (overLimit ? '<span style="color:var(--danger);font-weight:700"> · PRZEKROCZONO LIMIT</span>' : overStandard ? '<span style="color:var(--accent2);font-weight:700"> · NADGODZINY</span>' : '') +
-        '</div>' +
-        '<div style="display:flex;gap:6px;">' +
-          _startBtn +
-          '<button class="btn btn-ghost btn-sm" onclick="openModal(&quot;set-nadgodziny&quot;,&quot;' + k.id + '&quot;)">&#9200; OT</button>' +
-          '<button class="btn btn-ghost btn-sm" onclick="openModal(&quot;set-dniowka&quot;,&quot;' + k.id + '&quot;)">&#9998; Dniówka</button>' +
-        '</div>' +
-      '</div>' +
-      '<div style="background:var(--border);border-radius:3px;height:8px;overflow:hidden;position:relative;">' +
-        '<div id="dniowka-bar-fill" style="height:100%;width:' + pct + '%;background:' + barColor + ';border-radius:3px;transition:width .4s"></div>' +
-        _barMark +
-      '</div>';
-    // Uruchom tick dniówki jeśli trwa
-    if (dniowkaRunning) startDniowkaTick(k.id, limitH);
-  }
 
   renderZadania(k);
   renderWyjasnienia(k);
@@ -1569,37 +1509,6 @@ function timerReset(zid) {
   renderKabinaDetail();
 }
 
-// Jeden wspólny interval dla paska dniówki — zamiast aktualizować go w każdym timerze osobno
-let dniowkaBarInterval = null;
-
-function startDniowkaBarTick() {
-  if (dniowkaBarInterval) return;
-  dniowkaBarInterval = setInterval(() => {
-    const k = S.kabiny.find(k=>k.id===S.activeKabinaId);
-    if (!k) return;
-    const nrZm = k.aktywnaZmiana || 1;
-    const zm = k.zmiany[nrZm];
-    if (!zm.dniowkaStart || zm.dniowkaStop) return;
-    const BAZA_H = 8;
-    const dniowkaH = zm.dniowka || BAZA_H;
-    const nadgodzinyH = zm.nadgodziny || 0;
-    const limitH = dniowkaH + nadgodzinyH;
-    const dniowkaSec = limitH * 3600;
-    const elapsed = Math.floor((Date.now() - new Date(zm.dniowkaStart)) / 1000);
-    const pct = Math.min(100, Math.round((elapsed / dniowkaSec) * 100));
-    const overStandard = elapsed > (BAZA_H * 3600);
-    const overLimit = elapsed > dniowkaSec;
-    const barColor = overLimit ? 'var(--danger)' : overStandard ? 'var(--accent2)' : pct > 80 ? 'var(--yellow)' : 'var(--green)';
-    const elEl = document.getElementById('dniowka-elapsed');
-    const barFill = document.getElementById('dniowka-bar-fill');
-    if (elEl) { elEl.textContent = formatTimer(elapsed); elEl.style.color = barColor; }
-    if (barFill) { barFill.style.width = pct+'%'; barFill.style.background = barColor; }
-  }, 1000);
-}
-
-function stopDniowkaBarTick() {
-  if (dniowkaBarInterval) { clearInterval(dniowkaBarInterval); dniowkaBarInterval = null; }
-}
 
 function startLiveTick(zid) {
   stopLiveTick(zid);
@@ -1612,17 +1521,12 @@ function startLiveTick(zid) {
     el.textContent = formatTimer(timerElapsed(z));
   }, 1000);
   // Uruchom wspólny interval dla paska dniówki (jeden dla wszystkich timerów)
-  startDniowkaBarTick();
 }
 
 function stopLiveTick(zid) {
   if (timerIntervals[zid]) {
     clearInterval(timerIntervals[zid]);
     delete timerIntervals[zid];
-  }
-  // Zatrzymaj pasek dniówki gdy nie ma aktywnych timerów
-  if (Object.keys(timerIntervals).length === 0) {
-    stopDniowkaBarTick();
   }
 }
 
@@ -2192,159 +2096,7 @@ function openModal(type, arg) {
       <button class="btn btn-primary" onclick="timerPauseConfirm('${arg}')">Wstrzymaj zadanie</button>`;
   }
 
-  else if (type === 'set-dniowka') {
-    const k = S.kabiny.find(k=>k.id===arg);
-    title.textContent = 'Dniówka — ' + (k?.name || '');
-    const current = k?.dniowka || 8;
-    body.innerHTML = `
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Ustaw planowaną długość dnia pracy dla tej kabiny. Możesz zmienić w dowolnym momencie.</div>
-      <div class="field" style="margin-bottom:14px">
-        <label>Gotowe opcje</label>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-top:4px" id="dniowka-presets">
-          ${[6,7,8,9,10,11,12].map(h=>`
-            <button type="button" class="dniowka-preset ${current==h?'active':''}" onclick="selectDniowkaPreset(${h})">${h}h</button>
-          `).join('')}
-        </div>
-      </div>
-      <div class="field">
-        <label>Lub wpisz własną wartość (godziny)</label>
-        <input id="m-dniowka" type="number" min="1" max="24" step="0.5" value="${current}" placeholder="np. 10">
-      </div>`;
-    footer.innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
-      <button class="btn btn-primary" onclick="saveDniowka('${arg}')">Zapisz</button>`;
-  }
 
-  else if (type === 'set-nadgodziny') {
-    const k = S.kabiny.find(k=>k.id===arg);
-    if (!k) return;
-    const nrZm = k.aktywnaZmiana || 1;
-    const current = k.zmiany[nrZm].nadgodziny || 0;
-    title.textContent = '⏰ Nadgodziny — ' + (k?.name || '');
-    body.innerHTML =
-      '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Ile nadgodzin zaplanowano dla Zmiany ' + nrZm + '? Pasek dniówki będzie liczył 8h + nadgodziny.</div>' +
-      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;">' +
-        [0,1,2,3,4,5,6].map(h =>
-          '<button type="button" class="dniowka-preset ' + (current==h?'active':'') + '" onclick="selectNadgodzinyPreset(' + h + ')">' + (h===0?'Brak':h+'h') + '</button>'
-        ).join('') +
-      '</div>' +
-      '<div class="field">' +
-        '<label>Lub wpisz własną wartość (godziny)</label>' +
-        '<input id="m-nadgodziny" type="number" min="0" max="12" step="0.5" value="' + current + '" placeholder="0">' +
-      '</div>';
-    footer.innerHTML =
-      '<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>' +
-      '<button class="btn btn-secondary" onclick="saveNadgodziny(\'' + arg + '\')">⏰ Zapisz nadgodziny</button>';
-  }
-
-  else if (type === 'report-problem') {
-    const z = findZadanie(arg);
-    title.textContent = '⚠ Zgłoś problem';
-    body.innerHTML = `
-      <div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Zadanie: <strong style="color:var(--text)">${esc(z?.nazwa||'')}</strong></div>
-      <div class="field form-full">
-        <label>Opis problemu</label>
-        <textarea id="m-problem" placeholder="Opisz napotkany problem..." style="min-height:100px">${esc(z?.problem||'')}</textarea>
-      </div>`;
-    footer.innerHTML = `
-      <button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
-      ${z?.problem ? `<button class="btn btn-ghost" onclick="clearProblem('${arg}')">Usuń problem</button>` : ''}
-      <button class="btn btn-danger" onclick="saveProblem('${arg}')">Zapisz problem</button>`;
-  }
-
-  else if (type === 'set-blokada') {
-    const z = findZadanie(arg);
-    if (!z) return;
-    title.textContent = '🚫 Blokada zadania';
-    const currentPowod = z?.blokada || '';
-    const currentOpis = z?.blokadaOpis || '';
-    body.innerHTML =
-      '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Zadanie: <strong style="color:var(--text)">' + esc(z?.nazwa||'') + '</strong></div>' +
-      '<div class="field" style="margin-bottom:12px">' +
-        '<label>Powód blokady</label>' +
-        '<select id="m-blokada-powod" onchange="toggleBlokadaOpis(this.value)">' +
-          '<option value="">— wybierz —</option>' +
-          '<option value="Brak materiału"' + (currentPowod==='Brak materiału'?' selected':'') + '>Brak materiału</option>' +
-          '<option value="Słaba jakość"' + (currentPowod==='Słaba jakość'?' selected':'') + '>Słaba jakość</option>' +
-          '<option value="Oczekiwanie na decyzję"' + (currentPowod==='Oczekiwanie na decyzję'?' selected':'') + '>Oczekiwanie na decyzję</option>' +
-          '<option value="Oczekiwanie na inny dział"' + (currentPowod==='Oczekiwanie na inny dział'?' selected':'') + '>Oczekiwanie na inny dział</option>' +
-          '<option value="Brak pracownika"' + (currentPowod==='Brak pracownika'?' selected':'') + '>Brak pracownika</option>' +
-          '<option value="Inne"' + (currentPowod==='Inne'?' selected':'') + '>Inne</option>' +
-        '</select>' +
-      '</div>' +
-      '<div class="field" id="blokada-opis-wrap" style="display:' + (currentPowod ? 'block' : 'none') + '">' +
-        '<label>Szczegóły (opcjonalnie)</label>' +
-        '<input id="m-blokada-opis" placeholder="np. brakuje śrub M6, czekamy na projekt X..." value="' + esc(currentOpis) + '">' +
-      '</div>';
-    footer.innerHTML =
-      '<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>' +
-      (z?.blokada ? '<button class="btn btn-ghost" onclick="clearBlokada(\'' + arg + '\')">Usuń blokadę</button>' : '') +
-      '<button class="btn btn-secondary" onclick="saveBlokada(\'' + arg + '\')">🚫 Zapisz blokadę</button>';
-  }
-
-
-  else if (type === 'add-wyjasnienie' || type === 'edit-wyjasnienie') {
-    const isEdit = type === 'edit-wyjasnienie';
-    const k = S.kabiny.find(k=>k.id===S.activeKabinaId);
-    const w = isEdit ? (k?.wyjasnienia||[]).find(w=>w.id===arg) : null;
-    title.textContent = isEdit ? 'Edytuj wpis' : '+ Nowy wpis do wyjaśnienia';
-    body.innerHTML = `
-      <div class="field form-full" style="margin-bottom:12px">
-        <label>Opis problemu / pytania</label>
-        <textarea id="wyj-tekst" placeholder="Opisz problem konstrukcyjny, niejasność lub temat do wyjaśnienia..." style="min-height:100px">${esc(w?.tekst||'')}</textarea>
-      </div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Kategoria</label>
-          <select id="wyj-kat">
-            <option value="Problem konstrukcyjny" ${w?.kategoria==='Problem konstrukcyjny'?'selected':''}>Problem konstrukcyjny</option>
-            <option value="Niejasność projektowa" ${w?.kategoria==='Niejasność projektowa'?'selected':''}>Niejasność projektowa</option>
-            <option value="Do wyjaśnienia / doprecyzowania" ${w?.kategoria==='Do wyjaśnienia / doprecyzowania'?'selected':''}>Do wyjaśnienia</option>
-            <option value="Zmiana w projekcie" ${w?.kategoria==='Zmiana w projekcie'?'selected':''}>Zmiana w projekcie</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>Priorytet</label>
-          <select id="wyj-prior">
-            <option value="normalny" ${w?.priorytet==='normalny'?'selected':''}>Normalny</option>
-            <option value="wysoki" ${w?.priorytet==='wysoki'?'selected':''}>🟡 Wysoki</option>
-            <option value="pilne" ${w?.priorytet==='pilne'?'selected':''}>🔴 Pilne</option>
-          </select>
-        </div>
-      </div>
-`;  // foto removed
-    footer.innerHTML = `
-      <button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
-      ${isEdit ? `<button class="btn btn-ghost" onclick="deleteWyjasnienie('${k?.id}',${(k?.wyjasnienia||[]).findIndex(w=>w.id===arg)})">Usuń</button>` : ''}
-      <button class="btn btn-primary" onclick="saveWyjasnienie()">Zapisz</button>`;
-  }
-
-  else if (type === 'set-manual-time') {
-    const z = findZadanie(arg);
-    if (!z) return;
-    const currentMins = z.czas || Math.ceil((z.czasNazbierany||0)/60) || '';
-    const today = new Date().toISOString().split('T')[0];
-    const currentDate = z.dataWykonania || today;
-    title.textContent = '⏱ Ustaw czas ręcznie';
-    body.innerHTML = `
-      <div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Zadanie: <strong style="color:var(--text)">${esc(z.nazwa)}</strong></div>
-      <div class="field" style="margin-bottom:14px;">
-        <label>Data wykonania</label>
-        <input id="m-time-date" type="date" value="${currentDate}" max="${today}">
-      </div>
-      <div class="form-grid">
-        <div class="field">
-          <label>Godziny</label>
-          <input id="m-time-h" type="number" min="0" max="99" placeholder="0" value="${Math.floor((currentMins||0)/60)}">
-        </div>
-        <div class="field">
-          <label>Minuty</label>
-          <input id="m-time-m" type="number" min="0" max="59" placeholder="0" value="${(currentMins||0)%60}">
-        </div>
-      </div>
-      <div style="font-size:11px;color:var(--muted);margin-top:8px;">Aktualny czas: <strong>${currentMins ? currentMins+'min' : '—'}</strong></div>`;
-    footer.innerHTML = `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
-      <button class="btn btn-primary" onclick="saveManualTime('${arg}')">Zapisz czas</button>`;
-  }
 
   else if (type === 'set-pomocnik-zadania') {
     const z = findZadanie(arg);
@@ -2698,93 +2450,6 @@ function togglePauseOther(val) {
   document.getElementById('pause-other-wrap').style.display = val === 'inne' ? 'block' : 'none';
 }
 
-function selectDniowkaPreset(h) {
-  document.getElementById('m-dniowka').value = h;
-  document.querySelectorAll('.dniowka-preset').forEach(b => b.classList.toggle('active', parseInt(b.textContent)==h));
-}
-
-
-function selectNadgodzinyPreset(h) {
-  document.getElementById('m-nadgodziny').value = h;
-  document.querySelectorAll('.dniowka-preset').forEach(b => {
-    const label = b.textContent.trim();
-    const val = label === 'Brak' ? 0 : parseInt(label);
-    b.classList.toggle('active', val === h);
-  });
-}
-
-
-function startDniowka(kid) {
-  const k = S.kabiny.find(k=>k.id===kid);
-  if (!k) return;
-  const nrZm = k.aktywnaZmiana || 1;
-  const zm = k.zmiany[nrZm];
-  if (zm.dniowkaStart && !zm.dniowkaStop) { toast('Dniówka już uruchomiona', 'error'); return; }
-  zm.dniowkaStart = new Date().toISOString();
-  zm.dniowkaStop = null;
-  save(); renderKabinaDetail();
-  toast('▶ Dniówka rozpoczęta', 'success');
-  startDniowkaTick(kid, (zm.dniowka||8) + (zm.nadgodziny||0));
-}
-
-function stopDniowka(kid) {
-  const k = S.kabiny.find(k=>k.id===kid);
-  if (!k) return;
-  const nrZm = k.aktywnaZmiana || 1;
-  const zm = k.zmiany[nrZm];
-  if (!zm.dniowkaStart) { toast('Dniówka nie jest uruchomiona', 'error'); return; }
-  zm.dniowkaStop = new Date().toISOString();
-  stopDniowkaTick();
-  // Zatrzymaj wszystkie aktywne zadania jak globalna pauza
-  let stopped = 0;
-  (zm.zadania||[]).forEach(z => {
-    if (z.timerStart) {
-      const elapsed = timerElapsed(z);
-      z.czasNazbierany = (z.czasNazbierany || 0) + elapsed;
-      z.timerStart = null;
-      z.status = 'todo';
-      stopLiveTick(z.id);
-      stopped++;
-    }
-  });
-  save(); renderKabinaDetail(); renderKabinyGrid();
-  toast('■ Dniówka zakończona' + (stopped > 0 ? ` · Zatrzymano ${stopped} zadań` : ''), 'success');
-}
-
-function startDniowkaTick(kid, limitH) {
-  startDniowkaBarTick();
-}
-
-function saveNadgodziny(kid) {
-  const k = S.kabiny.find(k=>k.id===kid);
-  if (!k) return;
-  const val = parseFloat(document.getElementById('m-nadgodziny')?.value) || 0;
-  if (val < 0 || val > 12) { toast('Podaj wartość od 0 do 12h', 'error'); return; }
-  const nrZm = k.aktywnaZmiana || 1;
-  k.zmiany[nrZm].nadgodziny = val;
-  save(); closeModal(); renderKabinaDetail();
-  toast(val > 0 ? `⏰ Nadgodziny Zmiany ${nrZm}: +${val}h` : 'Nadgodziny usunięte');
-  // Synchronizuj do Airtable — pole Nadgodziny w tabeli Kabiny
-  if (S.airtable?.apiKey && S.airtable?.baseId && k._airtableId) {
-    fetch(`https://api.airtable.com/v0/${S.airtable.baseId}/Kabiny/${k._airtableId}`, {
-      method: 'PATCH',
-      headers: { 'Authorization': `Bearer ${S.airtable.apiKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ fields: { 'Nadgodziny': val } })
-    }).catch(() => {});
-  }
-}
-
-function saveDniowka(kid) {
-  const k = S.kabiny.find(k=>k.id===kid);
-  if (!k) return;
-  const val = parseFloat(document.getElementById('m-dniowka')?.value);
-  if (!val || val < 1 || val > 24) { toast('Podaj wartość od 1 do 24h', 'error'); return; }
-  const nrZm = k.aktywnaZmiana || 1;
-  k.zmiany[nrZm].dniowka = val;
-  save(); closeModal(); renderKabinaDetail();
-  toast(`Dniówka Zmiany ${nrZm}: ${val}h`);
-}
-
 function assignStolarz() {
   const k = S.kabiny.find(k=>k.id===S.activeKabinaId);
   if (!k) return;
@@ -2904,11 +2569,23 @@ function renderOhecnosc() {
           <input placeholder="Notatka (opcjonalne)" value="${esc(a.note||'')}" onchange="setAttNote('${w}',this.value)"
             style="font-size:11px;padding:4px 8px;border:1.5px solid var(--border);border-radius:3px;background:var(--bg);font-family:'Inconsolata',monospace;flex:1;min-width:120px">
         </div>` : '';
+      const nadgH = a.nadgodziny || 0;
+      const nadgHtml = (a.status === 'present' || a.status === 'late') ? `
+        <div style="display:flex;align-items:center;gap:8px;margin-top:8px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--muted);">⏰ Nadgodziny:</span>
+          ${[0,1,2,3,4,6].map(h => `<button type="button"
+            style="padding:3px 10px;border-radius:4px;border:1.5px solid ${nadgH===h?'var(--accent)':'var(--border)'};background:${nadgH===h?'var(--accent)':'transparent'};color:${nadgH===h?'#fff':'var(--text)'};font-size:11px;cursor:pointer;font-family:inherit;"
+            onclick="setNadgodziny('${w}',${h})">${h===0?'Brak':'+'+h+'h'}</button>`).join('')}
+          <input type="number" min="0" max="12" step="1" value="${nadgH||''}" placeholder="inne"
+            onchange="setNadgodziny('${w}',parseFloat(this.value)||0)"
+            style="width:60px;padding:3px 6px;font-size:11px;border:1.5px solid var(--border);border-radius:4px;background:var(--bg);font-family:inherit;">
+        </div>` : '';
       return `<div class="att-worker-card ${cls}">
         <div>
           <div class="att-name">${w}</div>
           ${a.status ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${a.reason||''} ${a.note ? '· '+a.note : ''}</div>` : ''}
           ${reasonHtml}
+          ${nadgHtml}
         </div>
         <div class="att-status-btns">
           <button class="att-status-btn ${a.status==='present'?'active-present':''}" onclick="setAtt('${w}','present')">✓ Obecny</button>
@@ -2936,6 +2613,16 @@ function renderOhecnosc() {
         </div>`;
       }).join('') + '</div>';
   }
+}
+
+
+function setNadgodziny(worker, h) {
+  const today = todayKey();
+  if (!S.attendance) S.attendance = {};
+  if (!S.attendance[today]) S.attendance[today] = {};
+  if (!S.attendance[today][worker]) S.attendance[today][worker] = {};
+  S.attendance[today][worker].nadgodziny = h;
+  save(); renderZespol();
 }
 
 function setAtt(worker, status) {
@@ -3032,24 +2719,7 @@ function confirmGlobalPause(reason) {
   const ts = new Date().toISOString();
   let count = 0;
 
-  // Oblicz nadgodziny jeśli powód to "Koniec dniówki"
-  let finalReason = reason;
-  if (reason === 'Koniec dniówki') {
-    const BAZA_H = 8;
-    const BAZA_SEC = BAZA_H * 3600;
-    // Zsumuj czas wszystkich aktywnych i wstrzymanych zadań
-    let totalSec = 0;
-    S.kabiny.forEach(k => [1,2].forEach(nr => {
-      (k.zmiany[nr]?.zadania||[]).forEach(z => {
-        totalSec += timerElapsed(z);
-      });
-    }));
-    if (totalSec > BAZA_SEC) {
-      const overtimeSec = totalSec - BAZA_SEC;
-      const overtimeH = (overtimeSec / 3600).toFixed(1);
-      finalReason = `Koniec dniówki (w tym ${overtimeH}h nadgodzin)`;
-    }
-  }
+  const finalReason = reason;
 
   S.kabiny.forEach(k => [1,2].forEach(nr => {
     (k.zmiany[nr]?.zadania||[]).forEach(z => {
@@ -3653,6 +3323,7 @@ async function sendZespolToAirtable() {
       'Data': today,
       'Jacht': S.yacht?.model || '',
       'Status obecnosci': statusMap[a.status],
+      'Nadgodziny': a.nadgodziny || 0,
     };
     if (pracownikId) fields['Pracownik'] = [pracownikId];
     // Dodaj oceny jeśli są
@@ -4189,6 +3860,22 @@ async function registerSW() {
     swRegistration = await navigator.serviceWorker.register('sw.js');
     console.log('[PWA] SW zarejestrowany');
     swReady = true;
+
+    // Automatyczne wykrywanie nowej wersji SW
+    swRegistration.addEventListener('updatefound', () => {
+      const newWorker = swRegistration.installing;
+      newWorker.addEventListener('statechange', () => {
+        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+          // Nowa wersja gotowa — poinformuj użytkownika i odśwież
+          console.log('[PWA] Nowa wersja dostępna — odświeżam...');
+          toast('🔄 Nowa wersja aplikacji — odświeżam...', 'success');
+          setTimeout(() => { window.location.reload(); }, 1500);
+        }
+      });
+    });
+
+    // Sprawdź aktualizację przy każdym uruchomieniu
+    swRegistration.update();
 
     // Nasłuchuj wiadomości od SW
     navigator.serviceWorker.addEventListener('message', onSWMessage);
