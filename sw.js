@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prototyp-desk-v14';
+const CACHE_NAME = 'prototyp-desk-v15';
 
 // Przy instalacji - aktywuj natychmiast bez czekania
 self.addEventListener('install', event => {

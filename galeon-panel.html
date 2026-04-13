@@ -3553,36 +3553,59 @@ async function cloudBackupNow(silent=false) {
   };
 
   try {
-    // Szukaj istniejącego rekordu dla tego dnia i jachtu
-    const filter = encodeURIComponent(`AND({Data}="${today}",{Jacht}="${S.yacht?.model||'brak'}")`);
-    const searchResp = await fetch(
-      `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(BACKUP_TABLE)}?filterByFormula=${filter}`,
-      { headers: { 'Authorization': `Bearer ${cfg.apiKey}` } }
-    );
+    // Sprawdź czy mamy zapisane ID rekordu dla dzisiejszego dnia
+    const cachedId = S.airtable.currentBackupRecordId;
+    const cachedDate = S.airtable.currentBackupDate;
 
-    if (searchResp.ok) {
-      const searchData = await searchResp.json();
-      if (searchData.records && searchData.records.length > 0) {
-        // Aktualizuj istniejący rekord
-        const recId = searchData.records[0].id;
-        await fetch(
-          `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(BACKUP_TABLE)}/${recId}`,
-          {
-            method: 'PATCH',
-            headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fields })
+    if (cachedId && cachedDate === today) {
+      // Mamy ID — od razu PATCH, bez szukania
+      await fetch(
+        `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(BACKUP_TABLE)}/${cachedId}`,
+        {
+          method: 'PATCH',
+          headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ fields })
+        }
+      );
+    } else {
+      // Brak ID lub nowy dzień — szukaj w Airtable
+      const filter = encodeURIComponent(`AND({Data}="${today}",{Jacht}="${S.yacht?.model||'brak'}")`);
+      const searchResp = await fetch(
+        `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(BACKUP_TABLE)}?filterByFormula=${filter}`,
+        { headers: { 'Authorization': `Bearer ${cfg.apiKey}` } }
+      );
+
+      if (searchResp.ok) {
+        const searchData = await searchResp.json();
+        if (searchData.records && searchData.records.length > 0) {
+          // Rekord istnieje — PATCH i zapisz ID
+          const recId = searchData.records[0].id;
+          S.airtable.currentBackupRecordId = recId;
+          S.airtable.currentBackupDate = today;
+          await fetch(
+            `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(BACKUP_TABLE)}/${recId}`,
+            {
+              method: 'PATCH',
+              headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fields })
+            }
+          );
+        } else {
+          // Nowy dzień — POST i zapisz ID nowego rekordu
+          const postResp = await fetch(
+            `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(BACKUP_TABLE)}`,
+            {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
+              body: JSON.stringify({ fields })
+            }
+          );
+          if (postResp.ok) {
+            const postData = await postResp.json();
+            S.airtable.currentBackupRecordId = postData.id;
+            S.airtable.currentBackupDate = today;
           }
-        );
-      } else {
-        // Utwórz nowy rekord
-        await fetch(
-          `https://api.airtable.com/v0/${cfg.baseId}/${encodeURIComponent(BACKUP_TABLE)}`,
-          {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ fields })
-          }
-        );
+        }
       }
     }
 
