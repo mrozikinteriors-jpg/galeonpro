@@ -3290,6 +3290,31 @@ function renderZespol() {
           <button class="att-btn ${attStatus==='absent'?'active-absent':''}" onclick="setAtt('${w}','absent')">✗ Nieobecny</button>
         </div>
         ${reasonHtml}
+        ${(attStatus === 'present' || attStatus === 'late') ? `
+        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;flex-wrap:wrap;">
+          <span style="font-size:11px;color:var(--muted);">⏰ Nadgodziny:</span>
+          ${[0,1,2,3,4,6].map(h => `<button type="button"
+            style="padding:3px 10px;border-radius:4px;border:1.5px solid ${(att[w]?.nadgodziny||0)===h?'var(--accent)':'var(--border)'};background:${(att[w]?.nadgodziny||0)===h?'var(--accent)':'transparent'};color:${(att[w]?.nadgodziny||0)===h?'#fff':'var(--text)'};font-size:11px;cursor:pointer;font-family:inherit;"
+            onclick="setNadgodziny('${w}',${h})">${h===0?'Brak':'+'+h+'h'}</button>`).join('')}
+          <input type="number" min="0" max="12" step="1" value="${att[w]?.nadgodziny||''}" placeholder="inne"
+            onchange="setNadgodziny('${w}',parseFloat(this.value)||0)"
+            style="width:60px;padding:3px 6px;font-size:11px;border:1.5px solid var(--border);border-radius:4px;background:var(--bg);font-family:inherit;">
+        </div>
+        <div style="margin-top:8px;">
+          ${att[w]?.oddelegowany
+            ? `<div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:11px;background:var(--accent2);color:#fff;border-radius:4px;padding:3px 10px;font-weight:700;">
+                  🔀 Oddelegowany ${new Date(att[w].oddelegowany).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})}
+                </span>
+                <button type="button" onclick="cofnijOddelegowanie('${w}')"
+                  style="font-size:11px;padding:3px 8px;border-radius:4px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;">✕ Cofnij</button>
+              </div>`
+            : `<button type="button" onclick="setOddelegowany('${w}')"
+                style="font-size:11px;padding:4px 12px;border-radius:4px;border:1.5px solid var(--accent2);background:transparent;color:var(--accent2);cursor:pointer;font-family:inherit;font-weight:600;">
+                🔀 Oddelegowany
+              </button>`
+          }
+        </div>` : ''}
         <div style="font-size:10px;letter-spacing:1.5px;text-transform:uppercase;color:var(--muted);font-weight:700;margin:14px 0 8px;">Ocena dziś</div>
         <div class="ocena-kategorie">${kategorieHtml}</div>
         ${historyHtml}
