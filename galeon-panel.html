@@ -2580,12 +2580,32 @@ function renderOhecnosc() {
             onchange="setNadgodziny('${w}',parseFloat(this.value)||0)"
             style="width:60px;padding:3px 6px;font-size:11px;border:1.5px solid var(--border);border-radius:4px;background:var(--bg);font-family:inherit;">
         </div>` : '';
+      const oddelegowanyTs = a.oddelegowany || null;
+      const oddelegowanyHtml = (a.status === 'present' || a.status === 'late') ? `
+        <div style="margin-top:8px;">
+          ${oddelegowanyTs
+            ? `<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+                <span style="font-size:11px;background:var(--accent2);color:#fff;border-radius:4px;padding:3px 10px;font-weight:700;">
+                  🔀 Oddelegowany ${new Date(oddelegowanyTs).toLocaleTimeString('pl-PL',{hour:'2-digit',minute:'2-digit'})}
+                </span>
+                <button type="button" onclick="cofnijOddelegowanie('${w}')"
+                  style="font-size:11px;padding:3px 8px;border-radius:4px;border:1.5px solid var(--border);background:transparent;color:var(--muted);cursor:pointer;font-family:inherit;">
+                  ✕ Cofnij
+                </button>
+              </div>`
+            : `<button type="button" onclick="setOddelegowany('${w}')"
+                style="font-size:11px;padding:4px 12px;border-radius:4px;border:1.5px solid var(--accent2);background:transparent;color:var(--accent2);cursor:pointer;font-family:inherit;font-weight:600;">
+                🔀 Oddelegowany
+              </button>`
+          }
+        </div>` : '';
       return `<div class="att-worker-card ${cls}">
         <div>
           <div class="att-name">${w}</div>
           ${a.status ? `<div style="font-size:11px;color:var(--muted);margin-top:2px">${a.reason||''} ${a.note ? '· '+a.note : ''}</div>` : ''}
           ${reasonHtml}
           ${nadgHtml}
+          ${oddelegowanyHtml}
         </div>
         <div class="att-status-btns">
           <button class="att-status-btn ${a.status==='present'?'active-present':''}" onclick="setAtt('${w}','present')">✓ Obecny</button>
@@ -2615,6 +2635,45 @@ function renderOhecnosc() {
   }
 }
 
+
+
+function setOddelegowany(worker) {
+  const today = todayKey();
+  if (!S.attendance) S.attendance = {};
+  if (!S.attendance[today]) S.attendance[today] = {};
+  if (!S.attendance[today][worker]) S.attendance[today][worker] = {};
+  const ts = new Date().toISOString();
+  S.attendance[today][worker].oddelegowany = ts;
+  save();
+  renderZespol();
+  // Natychmiast wyślij do Airtable jeśli mamy _airtableId rekordu obecności
+  const cfg = S.airtable;
+  if (cfg.apiKey && cfg.baseId) {
+    const recId = S._obecnoscIds?.[today]?.[worker];
+    if (recId) {
+      fetch(`https://api.airtable.com/v0/${cfg.baseId}/Obecnosc_Oceny/${recId}`, {
+        method: 'PATCH',
+        headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ fields: { 'Oddelegowany': ts } })
+      }).then(() => toast(`🔀 ${worker} oddelegowany — zapisano w Airtable`, 'success'))
+        .catch(() => toast(`🔀 ${worker} oddelegowany — zapisano lokalnie`, 'success'));
+    } else {
+      toast(`🔀 ${worker} oddelegowany — wyślij zespół do Airtable`, 'success');
+    }
+  } else {
+    toast(`🔀 ${worker} oddelegowany`, 'success');
+  }
+}
+
+function cofnijOddelegowanie(worker) {
+  const today = todayKey();
+  if (S.attendance?.[today]?.[worker]) {
+    S.attendance[today][worker].oddelegowany = null;
+    save();
+    renderZespol();
+    toast('Oddelegowanie cofnięte');
+  }
+}
 
 function setNadgodziny(worker, h) {
   const today = todayKey();
@@ -3324,6 +3383,7 @@ async function sendZespolToAirtable() {
       'Jacht': S.yacht?.model || '',
       'Status obecnosci': statusMap[a.status],
       'Nadgodziny': a.nadgodziny || 0,
+      'Oddelegowany': a.oddelegowany || null,
     };
     if (pracownikId) fields['Pracownik'] = [pracownikId];
     // Dodaj oceny jeśli są
