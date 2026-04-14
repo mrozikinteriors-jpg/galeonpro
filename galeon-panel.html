@@ -765,6 +765,22 @@ body {
   letter-spacing: 1px; text-transform: uppercase;
   font-weight: 600;
 }
+
+.zadania-group { margin-bottom: 4px; }
+.zadania-group-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  margin-bottom: 2px;
+  user-select: none;
+}
+.zadania-group-header:hover { background: var(--surface2); }
+.zadania-group-body { margin-bottom: 6px; }
 </style>
 </head>
 <body>
@@ -1573,20 +1589,50 @@ function renderZadania(k) {
   const wip = zadania.filter(z=>z.timerStart).length;
   const problems = zadania.filter(z=>z.problem).length;
 
+  // Grupuj zadania
+  const groups = [
+    { key: 'wip',  label: '● W toku',     color: 'var(--accent)',  items: zadania.filter(z => z.timerStart || (z.status==='wip' && !z.timerStart)) },
+    { key: 'todo', label: 'Nie rozp.',     color: 'var(--muted)',   items: zadania.filter(z => z.status==='todo' && !z.timerStart) },
+    { key: 'done', label: '✓ Gotowe',      color: 'var(--green)',   items: zadania.filter(z => z.status==='done') },
+  ];
+
+  if (!S._zadaniaGroupCollapsed) S._zadaniaGroupCollapsed = {};
+
+  const groupsHtml = groups.map(g => {
+    if (g.items.length === 0) return '';
+    const collapsed = !!S._zadaniaGroupCollapsed[g.key];
+    return `<div class="zadania-group">
+      <div class="zadania-group-header" onclick="toggleZadanieGroup('${g.key}')">
+        <span style="color:${g.color};font-weight:700;font-size:11px;letter-spacing:1px;text-transform:uppercase;">${g.label}</span>
+        <span style="display:flex;align-items:center;gap:6px;">
+          <span style="font-size:11px;color:var(--muted);">${g.items.length}</span>
+          <span style="color:var(--muted);font-size:14px;">${collapsed ? '▶' : '▼'}</span>
+        </span>
+      </div>
+      ${collapsed ? '' : `<div class="zadania-group-body">${g.items.map(z => renderZadanieRow(z)).join('')}</div>`}
+    </div>`;
+  }).join('');
+
   el.innerHTML = `
     <div class="progress-strip">${segs}</div>
     <div class="zadania-stats">
       <span style="color:var(--accent);font-weight:700">Zmiana ${nrZm}</span>
       <span>Łącznie: <strong>${total}</strong></span>
       <span style="color:var(--green)">✓ Gotowe: <strong>${done}</strong></span>
-      ${wip ? `<span style="color:var(--green)">● W toku: <strong>${wip}</strong></span>` : ''}
+      ${wip ? `<span style="color:var(--blue)">● W toku: <strong>${wip}</strong></span>` : ''}
       ${problems ? `<span style="color:var(--danger)">⚠ Problemy: <strong>${problems}</strong></span>` : ''}
     </div>
-    <div class="zadania-lista">
-      ${zadania.map(z => renderZadanieRow(z)).join('')}
-    </div>`;
+    ${groupsHtml}`;
 
   restartActiveTicks();
+}
+
+
+function toggleZadanieGroup(key) {
+  if (!S._zadaniaGroupCollapsed) S._zadaniaGroupCollapsed = {};
+  S._zadaniaGroupCollapsed[key] = !S._zadaniaGroupCollapsed[key];
+  const k = S.kabiny.find(k=>k.id===S.activeKabinaId);
+  if (k) renderZadania(k);
 }
 
 function renderZadanieRow(z) {
@@ -2097,6 +2143,59 @@ function openModal(type, arg) {
   }
 
 
+
+  else if (type === 'set-manual-time') {
+    const z = findZadanie(arg);
+    if (!z) return;
+    const currentMins = z.czas || Math.ceil((z.czasNazbierany||0)/60) || 0;
+    const today = new Date().toISOString().split('T')[0];
+    const currentDate = z.dataWykonania || today;
+    title.textContent = '⏱ Ustaw czas ręcznie';
+    body.innerHTML =
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;">Zadanie: <strong style="color:var(--text)">' + esc(z.nazwa) + '</strong></div>' +
+      '<div class="field" style="margin-bottom:14px;">' +
+        '<label>Data wykonania</label>' +
+        '<input id="m-time-date" type="date" value="' + currentDate + '" max="' + today + '">' +
+      '</div>' +
+      '<div class="form-grid">' +
+        '<div class="field"><label>Godziny</label><input id="m-time-h" type="number" min="0" max="99" placeholder="0" value="' + Math.floor(currentMins/60) + '"></div>' +
+        '<div class="field"><label>Minuty</label><input id="m-time-m" type="number" min="0" max="59" placeholder="0" value="' + (currentMins%60) + '"></div>' +
+      '</div>' +
+      '<div style="font-size:11px;color:var(--muted);margin-top:8px;">Aktualny czas: <strong>' + (currentMins ? currentMins+'min' : '—') + '</strong></div>';
+    footer.innerHTML =
+      '<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>' +
+      '<button class="btn btn-primary" onclick="saveManualTime(\'' + arg + '\')">Zapisz czas</button>';
+  }
+
+  else if (type === 'set-blokada') {
+    const z = findZadanie(arg);
+    if (!z) return;
+    title.textContent = '🚫 Blokada zadania';
+    const currentPowod = z?.blokada || '';
+    const currentOpis = z?.blokadaOpis || '';
+    body.innerHTML =
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:14px;">Zadanie: <strong style="color:var(--text)">' + esc(z?.nazwa||'') + '</strong></div>' +
+      '<div class="field" style="margin-bottom:12px">' +
+        '<label>Powód blokady</label>' +
+        '<select id="m-blokada-powod" onchange="toggleBlokadaOpis(this.value)">' +
+          '<option value="">— wybierz —</option>' +
+          '<option value="Brak materiału"' + (currentPowod==='Brak materiału'?' selected':'') + '>Brak materiału</option>' +
+          '<option value="Słaba jakość"' + (currentPowod==='Słaba jakość'?' selected':'') + '>Słaba jakość</option>' +
+          '<option value="Oczekiwanie na decyzję"' + (currentPowod==='Oczekiwanie na decyzję'?' selected':'') + '>Oczekiwanie na decyzję</option>' +
+          '<option value="Oczekiwanie na inny dział"' + (currentPowod==='Oczekiwanie na inny dział'?' selected':'') + '>Oczekiwanie na inny dział</option>' +
+          '<option value="Brak pracownika"' + (currentPowod==='Brak pracownika'?' selected':'') + '>Brak pracownika</option>' +
+          '<option value="Inne"' + (currentPowod==='Inne'?' selected':'') + '>Inne</option>' +
+        '</select>' +
+      '</div>' +
+      '<div class="field" id="blokada-opis-wrap" style="display:' + (currentPowod ? 'block' : 'none') + '">' +
+        '<label>Szczegóły (opcjonalnie)</label>' +
+        '<input id="m-blokada-opis" placeholder="np. brakuje śrub M6..." value="' + esc(currentOpis) + '">' +
+      '</div>';
+    footer.innerHTML =
+      '<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>' +
+      (z?.blokada ? '<button class="btn btn-ghost" onclick="clearBlokada(\'' + arg + '\')">Usuń blokadę</button>' : '') +
+      '<button class="btn btn-secondary" onclick="saveBlokada(\'' + arg + '\')">🚫 Zapisz blokadę</button>';
+  }
 
   else if (type === 'set-pomocnik-zadania') {
     const z = findZadanie(arg);
