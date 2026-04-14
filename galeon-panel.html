@@ -3382,6 +3382,11 @@ async function sendZespolToAirtable() {
   if (!cfg.apiKey || !cfg.baseId) { toast('Uzupełnij konfigurację Airtable', 'error'); return; }
   const btn = document.getElementById('zespol-send-btn');
   btn.disabled = true; btn.textContent = 'Wysyłanie...';
+  // Upewnij się że LinkedIds są załadowane przed wysyłką
+  if (!S._linkedIds?.zespol || Object.keys(S._linkedIds.zespol).length === 0) {
+    btn.textContent = 'Ładowanie danych...';
+    await initAirtableLinkedIds();
+  }
   const today = todayKey();
   const att = S.attendance?.[today] || {};
   const tableName = 'Obecnosc_Oceny';
