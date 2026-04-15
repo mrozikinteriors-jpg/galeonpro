@@ -1,4 +1,4 @@
-const CACHE_NAME = 'prototyp-desk-v22';
+const CACHE_NAME = 'prototyp-desk-v23';
 self.addEventListener('install', event => { self.skipWaiting(); });
 self.addEventListener('activate', event => {
   event.waitUntil(

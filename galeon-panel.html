@@ -2909,6 +2909,8 @@ function confirmGlobalPause(reason) {
   S.kabiny.forEach(k => [1,2].forEach(nr => {
     (k.zmiany[nr]?.zadania||[]).forEach(z => {
       if (z.timerStart) {
+        // Zapamiętaj że to zadanie było aktywne przed pauzą globalną
+        z._wasRunningBeforeGlobal = true;
         z.czasNazbierany = timerElapsed(z);
         z.timerStart = null;
         if (!z.pauzeLogi) z.pauzeLogi = [];
@@ -2919,9 +2921,11 @@ function confirmGlobalPause(reason) {
           przyczyna: `[GLOBALNA] ${finalReason}`
         });
         stopLiveTick(z.id);
-        // EVENT LOGGING — PAUZA dla każdego zadania
         enqueueEvent(z.id, 'PAUZA', { przyczyna: `[GLOBALNA] ${finalReason}` });
         count++;
+      } else {
+        // Zadanie nie było aktywne — nie wznawiaj go po przerwie
+        z._wasRunningBeforeGlobal = false;
       }
     });
   }));
@@ -2929,7 +2933,7 @@ function confirmGlobalPause(reason) {
   globalPauseActive = true;
   S._globalPauseReason = finalReason;
   S._globalPauseTs = ts;
-  save();
+  save(); // Flagi _wasRunningBeforeGlobal zapisane w localStorage
   sendToSW({ type: 'TIMERS_PAUSE_ALL' });
 
   const btn = document.getElementById('global-pause-btn');
@@ -2945,11 +2949,12 @@ function globalResumeAll() {
 
   S.kabiny.forEach(k => [1,2].forEach(nr => {
     (k.zmiany[nr]?.zadania||[]).forEach(z => {
-      if (z.czasNazbierany > 0 && !z.timerStart && z.status === 'wip') {
+      // Wznawiaj TYLKO zadania które były aktywne przed pauzą globalną
+      if (z._wasRunningBeforeGlobal === true) {
         if (z.pauzeLogi) z.pauzeLogi.forEach(p => { if (!p.pauseEnd) p.pauseEnd = Date.now(); });
         z.timerStart = Date.now();
+        z._wasRunningBeforeGlobal = false; // Reset flagi — gotowy na kolejną pauzę
         startLiveTick(z.id);
-        // EVENT LOGGING — WZNOWIENIE dla każdego zadania
         enqueueEvent(z.id, 'WZNOWIENIE');
         count++;
       }
@@ -2966,7 +2971,7 @@ function globalResumeAll() {
   btn.classList.remove('is-paused');
 
   if (S.activeKabinaId) renderKabinaDetail();
-  toast(`▶ Wznowiono ${count} zadań`, 'success');
+  toast(`▶ Wznowiono ${count} ${count === 1 ? 'zadanie' : count < 5 ? 'zadania' : 'zadań'}`, 'success');
 }
 
 
