@@ -2601,9 +2601,11 @@ function renameKabina(kid) {
 function addWorker() {
   const name = document.getElementById('m-worker-name')?.value.trim();
   if (!name) { toast('Podaj imię i nazwisko', 'error'); return; }
+  if (S.workers.includes(name)) { toast('Pracownik już istnieje', 'error'); return; }
   S.workers.push(name);
   save(); closeModal(); renderWorkersList();
-  toast('Pracownik dodany: '+name);
+  toast('Pracownik dodany: '+name, 'success');
+  syncWorkerToAirtable(name);
 }
 
 function addWorkerZespol() {
@@ -2613,6 +2615,32 @@ function addWorkerZespol() {
   S.workers.push(name);
   save(); closeModal(); renderZespol();
   toast('Pracownik dodany: '+name, 'success');
+  syncWorkerToAirtable(name);
+}
+
+async function syncWorkerToAirtable(name) {
+  const cfg = S.airtable;
+  if (!cfg.apiKey || !cfg.baseId) return;
+  try {
+    const resp = await fetch(`https://api.airtable.com/v0/${cfg.baseId}/Zespol`, {
+      method: 'POST',
+      headers: { 'Authorization': `Bearer ${cfg.apiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fields: { 'Imie Nazwisko': name, 'Aktywny': true } })
+    });
+    if (resp.ok) {
+      const data = await resp.json();
+      // Zapisz nowe ID do _linkedIds żeby od razu działały linked records
+      if (!S._linkedIds) S._linkedIds = { kabiny: {}, zespol: {}, prototyp: null };
+      if (!S._linkedIds.zespol) S._linkedIds.zespol = {};
+      S._linkedIds.zespol[name] = data.id;
+      save();
+      logMsg(`✓ Pracownik ${name} dodany do Airtable`, 'ok');
+    } else {
+      logMsg(`✗ Błąd dodawania ${name} do Airtable`, 'err');
+    }
+  } catch(e) {
+    logMsg(`✗ Błąd sieci: ${e.message}`, 'err');
+  }
 }
 
 // ============================================================
