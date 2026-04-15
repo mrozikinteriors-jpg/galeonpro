@@ -2629,17 +2629,16 @@ async function syncWorkerToAirtable(name) {
     });
     if (resp.ok) {
       const data = await resp.json();
-      // Zapisz nowe ID do _linkedIds żeby od razu działały linked records
       if (!S._linkedIds) S._linkedIds = { kabiny: {}, zespol: {}, prototyp: null };
       if (!S._linkedIds.zespol) S._linkedIds.zespol = {};
       S._linkedIds.zespol[name] = data.id;
       save();
-      logMsg(`✓ Pracownik ${name} dodany do Airtable`, 'ok');
+      logMsg('✓ Pracownik '+name+' dodany do Airtable', 'ok');
     } else {
-      logMsg(`✗ Błąd dodawania ${name} do Airtable`, 'err');
+      logMsg('✗ Błąd dodawania '+name+' do Airtable', 'err');
     }
   } catch(e) {
-    logMsg(`✗ Błąd sieci: ${e.message}`, 'err');
+    logMsg('✗ Błąd sieci: '+e.message, 'err');
   }
 }
 
