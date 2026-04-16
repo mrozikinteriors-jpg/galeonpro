@@ -781,6 +781,57 @@ body {
 }
 .zadania-group-header:hover { background: var(--surface2); }
 .zadania-group-body { margin-bottom: 6px; }
+
+/* ── WIDOK DNIA ── */
+.dzien-kabina-block {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 14px;
+  overflow: hidden;
+}
+.dzien-kabina-header {
+  background: var(--accent);
+  color: #fff;
+  padding: 10px 16px;
+  font-weight: 700;
+  font-size: 13px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.dzien-kabina-meta {
+  font-size: 11px;
+  opacity: 0.85;
+  font-weight: 400;
+}
+.dzien-zadanie-row {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.dzien-zadanie-row:last-child { border-bottom: none; }
+.dzien-zadanie-name { font-size: 13px; font-weight: 600; flex: 1; min-width: 150px; }
+.dzien-zadanie-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+.dzien-plan-date {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--accent);
+  background: var(--accent-light);
+  border-radius: 4px;
+  padding: 2px 8px;
+  white-space: nowrap;
+}
+.dzien-empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 40px 20px;
+  font-size: 13px;
+}
 </style>
 </head>
 <body>
@@ -827,6 +878,7 @@ body {
 <div class="nav-tabs">
   <div class="nav-tab active" id="tab-wprowadzanie" onclick="openTab('wprowadzanie')">Kabiny</div>
   <div class="nav-tab" id="tab-zespol" onclick="openTab('zespol')">Zespół</div>
+  <div class="nav-tab" id="tab-dzien" onclick="openTab('dzien')">📅 Dzień</div>
   <div class="nav-tab" id="tab-podglad" onclick="openTab('podglad')">Wyślij</div>
 </div>
 
@@ -912,6 +964,32 @@ body {
 </div>
 
 <!-- =================== TAB: PODGLAD =================== -->
+<div id="view-dzien" class="container" style="display:none;">
+
+  <!-- SUB-TABS -->
+  <div style="display:flex;gap:0;border-bottom:2px solid var(--border);margin-bottom:16px;">
+    <button id="dzien-tab-dzis" onclick="switchDzienTab('dzis')"
+      style="flex:1;padding:10px;background:transparent;border:none;border-bottom:3px solid var(--accent);color:var(--accent);font-weight:700;font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:inherit;">
+      ● W toku dziś
+    </button>
+    <button id="dzien-tab-plan" onclick="switchDzienTab('plan')"
+      style="flex:1;padding:10px;background:transparent;border:none;border-bottom:3px solid transparent;color:var(--muted);font-size:12px;letter-spacing:1px;text-transform:uppercase;cursor:pointer;font-family:inherit;">
+      📅 Zaplanowane
+    </button>
+  </div>
+
+  <!-- W TOKU DZIŚ -->
+  <div id="dzien-view-dzis">
+    <div id="dzien-dzis-content"></div>
+  </div>
+
+  <!-- ZAPLANOWANE -->
+  <div id="dzien-view-plan" style="display:none;">
+    <div id="dzien-plan-content"></div>
+  </div>
+
+</div>
+
 <div id="view-podglad" class="container" style="display:none;">
 
   <div class="card">
@@ -1226,16 +1304,193 @@ function aktivujZmiane2(kid) {
   renderKabinyGrid();
   toast('Zmiana 2 aktywowana ✓', 'success');
 }
+
+// ============================================================
+// WIDOK DZIENNY — zakładka 📅 Dzień
+// ============================================================
+let _dzienActiveTab = 'dzis';
+
+function renderDzien() {
+  switchDzienTab(_dzienActiveTab);
+}
+
+function switchDzienTab(tab) {
+  _dzienActiveTab = tab;
+
+  const btnDzis = document.getElementById('dzien-tab-dzis');
+  const btnPlan = document.getElementById('dzien-tab-plan');
+  const viewDzis = document.getElementById('dzien-view-dzis');
+  const viewPlan = document.getElementById('dzien-view-plan');
+
+  if (tab === 'dzis') {
+    btnDzis.style.borderBottomColor = 'var(--accent)';
+    btnDzis.style.color = 'var(--accent)';
+    btnDzis.style.fontWeight = '700';
+    btnPlan.style.borderBottomColor = 'transparent';
+    btnPlan.style.color = 'var(--muted)';
+    btnPlan.style.fontWeight = '400';
+    viewDzis.style.display = 'block';
+    viewPlan.style.display = 'none';
+    renderDzienDzis();
+  } else {
+    btnPlan.style.borderBottomColor = 'var(--accent)';
+    btnPlan.style.color = 'var(--accent)';
+    btnPlan.style.fontWeight = '700';
+    btnDzis.style.borderBottomColor = 'transparent';
+    btnDzis.style.color = 'var(--muted)';
+    btnDzis.style.fontWeight = '400';
+    viewDzis.style.display = 'none';
+    viewPlan.style.display = 'block';
+    renderDzienPlan();
+  }
+}
+
+function renderDzienDzis() {
+  const el = document.getElementById('dzien-dzis-content');
+  const today = todayKey();
+
+  // Zbierz wszystkie zadania W TOKU ze wszystkich kabin
+  const wyniki = [];
+  S.kabiny.forEach(k => {
+    [1,2].forEach(nr => {
+      const zm = k.zmiany[nr];
+      if (!zm) return;
+      const aktywne = (zm.zadania||[]).filter(z => z.timerStart || z.status === 'wip');
+      if (aktywne.length === 0) return;
+      wyniki.push({ kabina: k, zm, nr, zadania: aktywne });
+    });
+  });
+
+  if (wyniki.length === 0) {
+    el.innerHTML = '<div class="dzien-empty">Brak aktywnych zadań.<br>Uruchom zadanie w dowolnej kabinie.</div>';
+    return;
+  }
+
+  el.innerHTML = wyniki.map(({ kabina, zm, nr, zadania }) => {
+    const stolarz = zm.stolarz || '—';
+    const pomocnik = zm.pomocnik || null;
+    const nadgH = (S.attendance?.[today]?.[stolarz]?.nadgodziny || 0);
+
+    const zadaniaHtml = zadania.map(z => {
+      const secs = timerElapsed(z);
+      const running = !!z.timerStart;
+      const badge = running
+        ? '<span style="font-size:10px;background:var(--green);color:#fff;border-radius:3px;padding:2px 7px;font-weight:700;">▶ W TOKU</span>'
+        : '<span style="font-size:10px;background:var(--yellow);color:#fff;border-radius:3px;padding:2px 7px;font-weight:700;">⏸ PAUZA</span>';
+      const blokada = z.blokada ? '<span style="font-size:10px;color:var(--danger);">🚫 '+z.blokada+'</span>' : '';
+      return '<div class="dzien-zadanie-row">' +
+        '<div style="flex:1">' +
+          '<div class="dzien-zadanie-name">' + esc(z.nazwa) + '</div>' +
+          '<div class="dzien-zadanie-meta">' + badge + (blokada ? ' '+blokada : '') + '</div>' +
+        '</div>' +
+        '<div style="font-size:13px;font-weight:700;color:var(--accent);min-width:60px;text-align:right;" id="dzien-timer-'+z.id+'">' + formatTimer(secs) + '</div>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="dzien-kabina-block">' +
+      '<div class="dzien-kabina-header">' +
+        '<div>' +
+          '<div style="font-weight:800;font-size:15px;">' + esc(kabina.name) + '</div>' +
+          '<div class="dzien-kabina-meta">Zmiana ' + nr + ' · ' + esc(stolarz) + (pomocnik ? ' + '+esc(pomocnik) : '') + '</div>' +
+        '</div>' +
+        '<div style="text-align:right;">' +
+          '<div style="font-size:11px;color:var(--muted);">Zadań: <strong>' + zadania.length + '</strong></div>' +
+          (nadgH > 0 ? '<div style="font-size:11px;color:var(--accent2);font-weight:700;">+'+nadgH+'h OT</div>' : '') +
+        '</div>' +
+      '</div>' +
+      zadaniaHtml +
+    '</div>';
+  }).join('');
+
+  // Odświeżaj timery co sekundę
+  if (!window._dzienTickInterval) {
+    window._dzienTickInterval = setInterval(() => {
+      if (_dzienActiveTab !== 'dzis') return;
+      S.kabiny.forEach(k => [1,2].forEach(nr => {
+        (k.zmiany[nr]?.zadania||[]).forEach(z => {
+          if (z.timerStart) {
+            const el2 = document.getElementById('dzien-timer-'+z.id);
+            if (el2) el2.textContent = formatTimer(timerElapsed(z));
+          }
+        });
+      }));
+    }, 1000);
+  }
+}
+
+function renderDzienPlan() {
+  const el = document.getElementById('dzien-plan-content');
+  const today = todayKey();
+
+  // Zbierz zadania z datą planowaną od jutra wzwyż
+  const wyniki = [];
+  S.kabiny.forEach(k => {
+    [1,2].forEach(nr => {
+      const zm = k.zmiany[nr];
+      if (!zm) return;
+      (zm.zadania||[]).forEach(z => {
+        if (!z.dataPlanowana) return;
+        if (z.dataPlanowana <= today) return; // tylko przyszłe
+        if (z.status === 'done') return; // pomiń ukończone
+        wyniki.push({ z, kabina: k, zm, nr });
+      });
+    });
+  });
+
+  if (wyniki.length === 0) {
+    el.innerHTML = '<div class="dzien-empty">Brak zaplanowanych zadań.<br>Ustaw datę planowaną przy zadaniu przyciskiem 📅.</div>';
+    return;
+  }
+
+  // Sortuj po dacie planowanej
+  wyniki.sort((a, b) => a.z.dataPlanowana.localeCompare(b.z.dataPlanowana));
+
+  // Grupuj po dacie
+  const grupyDat = {};
+  wyniki.forEach(item => {
+    const d = item.z.dataPlanowana;
+    if (!grupyDat[d]) grupyDat[d] = [];
+    grupyDat[d].push(item);
+  });
+
+  el.innerHTML = Object.entries(grupyDat).map(([date, items]) => {
+    const [y, m, d] = date.split('-');
+    const dateFmt = d + '.' + m + '.' + y;
+    const isTomorrow = date === (() => { const t = new Date(); t.setDate(t.getDate()+1); return t.toISOString().split('T')[0]; })();
+
+    const zadaniaHtml = items.map(({ z, kabina, zm, nr }) => {
+      const stolarz = zm.stolarz || '—';
+      const statusLabel = {todo:'Nie rozp.', wip:'W toku', done:'Gotowe'}[z.status] || z.status;
+      const blokada = z.blokada ? ' · 🚫 '+z.blokada : '';
+      return '<div class="dzien-zadanie-row">' +
+        '<div style="flex:1">' +
+          '<div class="dzien-zadanie-name">' + esc(z.nazwa) + '</div>' +
+          '<div class="dzien-zadanie-meta">' + esc(kabina.name) + ' · Zm.' + nr + ' · ' + esc(stolarz) + blokada + '</div>' +
+        '</div>' +
+        '<span class="dzien-plan-date">' + statusLabel + '</span>' +
+      '</div>';
+    }).join('');
+
+    return '<div class="dzien-kabina-block">' +
+      '<div class="dzien-kabina-header">' +
+        '<div style="font-weight:800;font-size:14px;">📅 ' + dateFmt + (isTomorrow ? ' · <span style="color:var(--accent)">JUTRO</span>' : '') + '</div>' +
+        '<div style="font-size:11px;color:var(--muted);">Zadań: ' + items.length + '</div>' +
+      '</div>' +
+      zadaniaHtml +
+    '</div>';
+  }).join('');
+}
+
 function openTab(tab) {
-  ['wprowadzanie','obecnosc','zespol','podglad','ustawienia'].forEach(t => {
+  ['wprowadzanie','obecnosc','zespol','dzien','podglad','ustawienia'].forEach(t => {
     document.getElementById('view-'+t).style.display = t===tab ? 'block' : 'none';
     document.getElementById('tab-'+t)?.classList.toggle('active', t===tab);
   });
   if (tab==='podglad') renderPodglad();
   if (tab==='ustawienia') renderUstawienia();
   if (tab==='zespol') renderZespol();
+  if (tab==='dzien') renderDzien();
   if (tab==='wprowadzanie') {
-    // Zawsze wróć do listy kabin przy kliknięciu zakładki
     S.activeKabinaId = null;
     save();
     renderWprowadzanie();
