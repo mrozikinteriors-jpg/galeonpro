@@ -666,7 +666,8 @@ body {
   80% { transform: translateX(5px); }
 }
 
-/* PIN SCREEN */
+/* WORKER CARD */
+.worker-card {
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: 6px;
@@ -1934,7 +1935,7 @@ function renderZadanieRow(z) {
       timerControls = `
         <div class="timer-block timer-running">
           <span class="timer-icon anim-pulse">●</span>
-          <span class="timer-value" id="timer-display-${z.id}">${timerDisplay}</span>
+          <span class="timer-value">${timerDisplay}</span>
           <button class="timer-btn timer-btn-pause" onclick="timerPause('${z.id}')">⏸ Pauza</button>
           <button class="timer-btn timer-btn-stop" onclick="timerStop('${z.id}')">⏹ Stop</button>
         </div>`;
@@ -2262,7 +2263,10 @@ function editWorker(i) {
     // update kabiny references
     const old = S.workers[i];
     S.workers[i] = newName.trim();
-    S.kabiny.forEach(k => { if (k.stolarz===old) k.stolarz = newName.trim(); });
+    S.kabiny.forEach(k => {
+      if (k.stolarz===old) k.stolarz = newName.trim();
+      if (k.pomocnik===old) k.pomocnik = newName.trim();
+    });
     save(); renderWorkersList();
     toast('Zaktualizowano: '+newName.trim());
   }
@@ -2272,7 +2276,10 @@ function deleteWorker(i) {
   if (!confirm('Usunąć pracownika?')) return;
   const name = S.workers[i];
   S.workers.splice(i,1);
-  S.kabiny.forEach(k => { if (k.stolarz===name) k.stolarz = null; });
+  S.kabiny.forEach(k => {
+    if (k.stolarz===name) k.stolarz = null;
+    if (k.pomocnik===name) k.pomocnik = null;
+  });
   save(); renderWorkersList(); toast('Pracownik usunięty');
 }
 
@@ -3026,7 +3033,7 @@ function setOddelegowany(worker) {
   const ts = new Date().toISOString();
   S.attendance[today][worker].oddelegowany = ts;
   save();
-  renderZespol();
+  renderZespol(); renderOhecnosc();
   // Natychmiast wyślij do Airtable jeśli mamy _airtableId rekordu obecności
   const cfg = S.airtable;
   if (cfg.apiKey && cfg.baseId) {
@@ -3051,7 +3058,7 @@ function cofnijOddelegowanie(worker) {
   if (S.attendance?.[today]?.[worker]) {
     S.attendance[today][worker].oddelegowany = null;
     save();
-    renderZespol();
+    renderZespol(); renderOhecnosc();
     toast('Oddelegowanie cofnięte');
   }
 }
@@ -3062,7 +3069,7 @@ function setNadgodziny(worker, h) {
   if (!S.attendance[today]) S.attendance[today] = {};
   if (!S.attendance[today][worker]) S.attendance[today][worker] = {};
   S.attendance[today][worker].nadgodziny = h;
-  save(); renderZespol();
+  save(); renderZespol(); renderOhecnosc();
 }
 
 function setAtt(worker, status) {
