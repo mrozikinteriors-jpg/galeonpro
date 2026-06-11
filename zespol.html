@@ -1,0 +1,1443 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#1a1714">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zespół">
+<title>Zespół — Galeon</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inconsolata:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+/* ── CONFIG ─────────────────────────────────────────── */
+:root {
+  --bg: #f5f2ed;
+  --surface: #ffffff;
+  --surface2: #f0ece5;
+  --border: #ddd8cf;
+  --text: #1a1714;
+  --muted: #8a8278;
+  --accent: #2b5c8a;
+  --accent-light: #e8f0f8;
+  --accent2: #c47d2e;
+  --accent2-light: #fdf3e7;
+  --danger: #c0392b;
+  --danger-light: #fdf0ef;
+  --green: #2d7a4f;
+  --green-light: #eaf4ef;
+  --yellow: #b8860b;
+  --yellow-light: #fefae8;
+}
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Inconsolata', monospace;
+  font-size: 14px;
+  min-height: 100vh;
+}
+
+/* ── TOPBAR ── */
+.topbar {
+  background: var(--text);
+  color: #fff;
+  padding: 0 12px;
+  min-height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  position: sticky; top: 0; z-index: 200;
+}
+.topbar-brand {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 14px;
+  letter-spacing: 2px; color: #fff;
+}
+.topbar-brand span { color: var(--accent2); }
+.topbar-right { display: flex; align-items: center; gap: 8px; }
+.unsaved-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--accent2);
+  display: none;
+}
+.unsaved-dot.show { display: block; }
+
+/* ── CONTAINER ── */
+.container { max-width: 680px; margin: 0 auto; padding: 16px 12px 100px; }
+
+/* ── DATE + UNIT BAR ── */
+.top-controls {
+  display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;
+}
+.top-controls .field { flex: 1; min-width: 140px; }
+.field { display: flex; flex-direction: column; gap: 4px; }
+.field label {
+  font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted); font-weight: 500;
+}
+.field input, .field select {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  font-family: 'Inconsolata', monospace;
+  font-size: 13px; border-radius: 4px;
+  outline: none; transition: border-color .15s;
+  width: 100%; min-height: 44px;
+}
+.field input:focus, .field select:focus { border-color: var(--accent); }
+
+/* ── SUMMARY BAR ── */
+.summary-bar {
+  display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap;
+}
+.summary-chip {
+  flex: 1; min-width: 80px;
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 6px; padding: 10px 14px;
+  text-align: center;
+}
+.summary-chip-val {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px; font-weight: 800; line-height: 1;
+}
+.summary-chip-label {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-top: 3px;
+}
+.chip-present .summary-chip-val { color: var(--green); }
+.chip-absent .summary-chip-val { color: var(--danger); }
+.chip-ot .summary-chip-val { color: var(--accent2); }
+
+/* ── ADD WORKER BTN ── */
+.add-worker-row {
+  display: flex; justify-content: flex-end;
+  margin-bottom: 10px;
+}
+.btn {
+  padding: 10px 18px;
+  font-family: 'Syne', sans-serif;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  cursor: pointer; border-radius: 4px;
+  border: none; transition: all .15s;
+  display: inline-flex; align-items: center; gap: 6px;
+  min-height: 44px;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #1e4266; }
+.btn-ghost {
+  background: transparent; color: var(--muted);
+  border: 1.5px solid var(--border);
+}
+.btn-ghost:hover { color: var(--text); border-color: var(--text); }
+.btn-danger-ghost {
+  background: var(--danger-light); color: var(--danger);
+  border: 1.5px solid #f5c6c2;
+}
+.btn-sm { padding: 7px 12px; font-size: 10px; min-height: 36px; }
+.btn-block { width: 100%; justify-content: center; }
+
+/* ── WORKER CARD ── */
+.worker-card {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px;
+  margin-bottom: 10px;
+  overflow: hidden;
+  transition: border-color .15s;
+}
+.worker-card.absent { border-left: 4px solid var(--danger); opacity: .75; }
+.worker-card.present { border-left: 4px solid var(--green); }
+.worker-card-header {
+  display: flex; align-items: center;
+  padding: 12px 14px; gap: 10px;
+  flex-wrap: wrap;
+}
+.worker-name {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800; font-size: 15px; flex: 1; min-width: 120px;
+}
+.worker-role {
+  font-size: 10px; color: var(--muted);
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-top: 2px;
+}
+.worker-controls {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+}
+
+/* ── TOGGLE ── */
+.toggle-wrap { display: flex; align-items: center; gap: 6px; }
+.toggle-label { font-size: 11px; color: var(--muted); user-select: none; }
+.toggle {
+  position: relative; width: 44px; height: 24px;
+  flex-shrink: 0;
+}
+.toggle input { opacity: 0; width: 0; height: 0; position: absolute; }
+.toggle-slider {
+  position: absolute; inset: 0;
+  background: var(--border); border-radius: 12px;
+  cursor: pointer; transition: background .2s;
+}
+.toggle-slider::before {
+  content: '';
+  position: absolute;
+  width: 18px; height: 18px; border-radius: 50%;
+  background: #fff; top: 3px; left: 3px;
+  transition: transform .2s;
+  box-shadow: 0 1px 3px rgba(0,0,0,.2);
+}
+.toggle input:checked + .toggle-slider { background: var(--green); }
+.toggle input:checked + .toggle-slider::before { transform: translateX(20px); }
+
+/* ── ZMIANA SWITCHER ── */
+.zmiana-switch {
+  display: flex; border: 1.5px solid var(--border);
+  border-radius: 4px; overflow: hidden; flex-shrink: 0;
+}
+.zmiana-switch button {
+  padding: 5px 12px; border: none; background: var(--surface2);
+  color: var(--muted); cursor: pointer;
+  font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+  transition: all .15s; min-height: 36px;
+}
+.zmiana-switch button.active { background: var(--accent); color: #fff; }
+
+/* ── STEPPER ── */
+.stepper {
+  display: flex; align-items: center; gap: 0;
+  border: 1.5px solid var(--border); border-radius: 4px;
+  overflow: hidden; flex-shrink: 0;
+}
+.stepper button {
+  width: 36px; height: 36px; border: none;
+  background: var(--surface2); color: var(--text);
+  font-size: 18px; cursor: pointer; transition: background .1s;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+}
+.stepper button:active { background: var(--border); }
+.stepper-val {
+  min-width: 36px; text-align: center;
+  font-family: 'Syne', sans-serif; font-weight: 700; font-size: 13px;
+  padding: 0 4px;
+}
+
+/* ── WORKER DETAIL ── */
+.worker-detail {
+  border-top: 1px solid var(--border);
+  padding: 12px 14px; background: var(--surface2);
+  display: flex; flex-direction: column; gap: 10px;
+}
+.detail-row {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+}
+.detail-label {
+  font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--muted); min-width: 130px; flex-shrink: 0;
+}
+.zadanie-tag {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: var(--accent-light); color: var(--accent);
+  border: 1px solid #b8d4ec; border-radius: 3px;
+  padding: 3px 10px; font-size: 11px; font-weight: 600;
+  max-width: 100%; flex-wrap: wrap;
+}
+.zadanie-tag.ng { background: var(--accent2-light); color: var(--accent2); border-color: #e8c48a; }
+.zadanie-clear {
+  background: none; border: none; cursor: pointer;
+  color: var(--muted); font-size: 13px; padding: 0; line-height: 1;
+}
+.zadanie-clear:hover { color: var(--danger); }
+.btn-zadanie {
+  padding: 6px 12px; border-radius: 4px;
+  font-family: 'Syne', sans-serif; font-size: 11px; font-weight: 700;
+  cursor: pointer; border: 1.5px dashed var(--border);
+  background: transparent; color: var(--muted);
+  transition: all .15s; min-height: 36px;
+  display: inline-flex; align-items: center; gap: 4px;
+}
+.btn-zadanie:hover { border-color: var(--accent); color: var(--accent); }
+.btn-zadanie.ng:hover { border-color: var(--accent2); color: var(--accent2); }
+
+/* ── INNE DZIAŁY ── */
+.inne-dzialy-section {
+  background: var(--surface);
+  border: 1.5px solid var(--border);
+  border-radius: 8px; margin-bottom: 14px;
+  overflow: hidden;
+}
+.inne-dzialy-header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 16px; cursor: pointer; user-select: none;
+  background: var(--surface2);
+}
+.inne-dzialy-title {
+  font-family: 'Syne', sans-serif; font-weight: 700;
+  font-size: 12px; letter-spacing: 1px; text-transform: uppercase;
+}
+.inne-dzialy-chevron { color: var(--muted); transition: transform .2s; font-size: 12px; }
+.inne-dzialy-chevron.open { transform: rotate(180deg); }
+.inne-dzialy-body { display: none; }
+.inne-dzialy-body.open { display: block; }
+.dzial-row {
+  display: flex; align-items: center; padding: 10px 16px;
+  border-bottom: 1px solid var(--border); gap: 10px; flex-wrap: wrap;
+}
+.dzial-row:last-child { border-bottom: none; }
+.dzial-name {
+  flex: 1; min-width: 100px;
+  font-size: 13px; font-weight: 600;
+}
+.dzial-fields { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.dzial-field-label { font-size: 10px; color: var(--muted); margin-bottom: 3px; text-transform: uppercase; letter-spacing: 1px; }
+
+/* ── SAVE BUTTON ── */
+.save-bar {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  background: var(--surface);
+  border-top: 2px solid var(--border);
+  padding: 12px 16px;
+  padding-bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 100;
+}
+.save-bar-inner { max-width: 680px; margin: 0 auto; }
+.btn-save {
+  width: 100%; padding: 14px;
+  font-family: 'Syne', sans-serif; font-size: 14px; font-weight: 800;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  background: var(--accent); color: #fff;
+  border: none; border-radius: 6px; cursor: pointer;
+  transition: all .15s; min-height: 52px;
+}
+.btn-save:hover { background: #1e4266; }
+.btn-save:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
+.btn-save.saving { background: var(--accent2); }
+
+/* ── MODAL ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(26,23,20,.65);
+  backdrop-filter: blur(3px);
+  z-index: 500; display: none;
+  align-items: flex-end; justify-content: center;
+}
+.overlay.open { display: flex; }
+.modal {
+  background: var(--surface);
+  border-radius: 12px 12px 0 0;
+  border: 1px solid var(--border);
+  width: 100%; max-width: 680px;
+  max-height: 90vh; overflow-y: auto;
+  box-shadow: 0 -8px 40px rgba(0,0,0,.18);
+}
+.modal-header {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+  position: sticky; top: 0; background: var(--surface); z-index: 1;
+}
+.modal-title { font-family: 'Syne', sans-serif; font-size: 15px; font-weight: 800; }
+.modal-close {
+  background: none; border: none; font-size: 22px;
+  cursor: pointer; color: var(--muted); line-height: 1; padding: 4px;
+}
+.modal-body { padding: 16px 20px; }
+.modal-footer {
+  padding: 12px 20px; border-top: 1px solid var(--border);
+  display: flex; justify-content: flex-end; gap: 8px;
+  position: sticky; bottom: 0; background: var(--surface);
+}
+
+/* ── SEARCH / TASK LIST ── */
+.task-search {
+  width: 100%; padding: 10px 12px;
+  border: 1.5px solid var(--border); border-radius: 4px;
+  font-family: 'Inconsolata', monospace; font-size: 13px;
+  background: var(--bg); color: var(--text);
+  outline: none; margin-bottom: 10px; min-height: 44px;
+}
+.task-search:focus { border-color: var(--accent); background: #fff; }
+.task-list { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow-y: auto; }
+.task-item {
+  display: flex; align-items: flex-start; gap: 10px;
+  padding: 10px 12px; border-radius: 5px;
+  cursor: pointer; border: 1.5px solid var(--border);
+  background: var(--surface); transition: all .12s;
+  min-height: 44px;
+}
+.task-item:hover { border-color: var(--accent); background: var(--accent-light); }
+.task-item.selected { border-color: var(--accent); background: var(--accent); color: #fff; }
+.task-item.selected .task-item-meta { color: rgba(255,255,255,.7); }
+.task-item-check { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+.task-item-body { flex: 1; }
+.task-item-name { font-weight: 600; font-size: 13px; line-height: 1.3; }
+.task-item-meta { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+/* ── FORM ROWS ── */
+.form-row { display: flex; flex-direction: column; gap: 5px; margin-bottom: 14px; }
+.form-row label {
+  font-size: 10px; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--muted);
+}
+.form-row input, .form-row select, .form-row textarea {
+  background: var(--bg); border: 1.5px solid var(--border);
+  color: var(--text); padding: 10px 12px;
+  font-family: 'Inconsolata', monospace; font-size: 13px;
+  border-radius: 4px; outline: none; transition: border-color .15s;
+  width: 100%; min-height: 44px;
+}
+.form-row input:focus, .form-row select:focus, .form-row textarea:focus {
+  border-color: var(--accent); background: #fff;
+}
+.form-row textarea { min-height: 80px; resize: vertical; }
+
+/* ── TOAST ── */
+.toast {
+  position: fixed; bottom: 80px; left: 50%;
+  transform: translateX(-50%) translateY(80px);
+  background: var(--text); color: #fff;
+  padding: 12px 20px; border-radius: 5px;
+  font-size: 12px; letter-spacing: .5px;
+  z-index: 1000; transition: transform .3s ease;
+  white-space: nowrap; max-width: 90vw; text-align: center;
+}
+.toast.show { transform: translateX(-50%) translateY(0); }
+.toast.success { background: var(--green); }
+.toast.error { background: var(--danger); }
+.toast.warn { background: var(--yellow); }
+
+/* ── PIN SCREEN ── */
+.pin-screen {
+  position: fixed; inset: 0;
+  background: var(--bg); z-index: 9999;
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center; padding: 24px;
+}
+.pin-dot {
+  width: 16px; height: 16px; border-radius: 50%;
+  border: 2px solid var(--accent); background: transparent;
+  transition: background .15s;
+}
+.pin-dot.filled { background: var(--accent); }
+.pin-key {
+  width: 72px; height: 72px; border-radius: 50%;
+  font-family: 'Syne', sans-serif; font-size: 24px; font-weight: 700;
+  background: var(--surface); border: 1.5px solid var(--border);
+  color: var(--text); cursor: pointer; transition: all .1s;
+  display: flex; align-items: center; justify-content: center;
+}
+.pin-key:active { background: var(--accent); color: #fff; border-color: var(--accent); transform: scale(.94); }
+.pin-key.shake { animation: pinShake .4s ease; }
+@keyframes pinShake {
+  0%,100% { transform: translateX(0); }
+  20% { transform: translateX(-8px); }
+  40% { transform: translateX(8px); }
+  60% { transform: translateX(-5px); }
+  80% { transform: translateX(5px); }
+}
+
+/* ── EMPTY / LOADING ── */
+.empty { text-align: center; padding: 32px; color: var(--muted); font-size: 13px; }
+.loader { text-align: center; padding: 24px; color: var(--muted); font-size: 12px; letter-spacing: 1px; }
+</style>
+</head>
+<body>
+
+<!-- ── PIN SCREEN ── -->
+<div id="pin-screen" class="pin-screen">
+  <div style="font-family:'Syne',sans-serif;font-size:28px;font-weight:900;color:var(--accent);margin-bottom:4px;letter-spacing:2px;">ZESPÓŁ</div>
+  <div style="font-size:12px;color:var(--muted);margin-bottom:40px;letter-spacing:2px;text-transform:uppercase;">Galeon Yachts</div>
+  <div id="pin-dots" style="display:flex;gap:14px;margin-bottom:12px;">
+    <div class="pin-dot" id="pd0"></div>
+    <div class="pin-dot" id="pd1"></div>
+    <div class="pin-dot" id="pd2"></div>
+    <div class="pin-dot" id="pd3"></div>
+  </div>
+  <div id="pin-error" style="font-size:12px;color:var(--danger);margin-bottom:20px;min-height:18px;text-align:center;"></div>
+  <div style="display:grid;grid-template-columns:repeat(3,72px);gap:12px;">
+    <button class="pin-key" onclick="pinKey('1')">1</button>
+    <button class="pin-key" onclick="pinKey('2')">2</button>
+    <button class="pin-key" onclick="pinKey('3')">3</button>
+    <button class="pin-key" onclick="pinKey('4')">4</button>
+    <button class="pin-key" onclick="pinKey('5')">5</button>
+    <button class="pin-key" onclick="pinKey('6')">6</button>
+    <button class="pin-key" onclick="pinKey('7')">7</button>
+    <button class="pin-key" onclick="pinKey('8')">8</button>
+    <button class="pin-key" onclick="pinKey('9')">9</button>
+    <div></div>
+    <button class="pin-key" onclick="pinKey('0')">0</button>
+    <button class="pin-key" onclick="pinKey('del')">⌫</button>
+  </div>
+  <button onclick="pinSkip()" style="margin-top:24px;background:none;border:none;color:var(--muted);font-size:11px;cursor:pointer;letter-spacing:1px;">POMIŃ</button>
+</div>
+
+<!-- ── TOPBAR ── -->
+<div class="topbar">
+  <div class="topbar-brand">ZESPÓŁ <span>GALEON</span></div>
+  <div class="topbar-right">
+    <div class="unsaved-dot" id="unsaved-dot" title="Niezapisane zmiany"></div>
+    <span style="font-size:10px;color:var(--muted);letter-spacing:1px;" id="topbar-date"></span>
+  </div>
+</div>
+
+<!-- ── MAIN ── -->
+<div class="container">
+
+  <!-- DATE + UNIT -->
+  <div class="top-controls">
+    <div class="field">
+      <label>Data</label>
+      <input type="date" id="input-date" onchange="onDateChange()">
+    </div>
+    <div class="field">
+      <label>Jednostka</label>
+      <select id="input-unit" onchange="onUnitChange()">
+        <option value="">— ładowanie —</option>
+      </select>
+    </div>
+  </div>
+
+  <!-- SUMMARY -->
+  <div class="summary-bar">
+    <div class="summary-chip chip-present">
+      <div class="summary-chip-val" id="sum-present">—</div>
+      <div class="summary-chip-label">Obecni</div>
+    </div>
+    <div class="summary-chip chip-absent">
+      <div class="summary-chip-val" id="sum-absent">—</div>
+      <div class="summary-chip-label">Nieobecni</div>
+    </div>
+    <div class="summary-chip chip-ot">
+      <div class="summary-chip-val" id="sum-ot">—</div>
+      <div class="summary-chip-label">Σ nadgodzin</div>
+    </div>
+  </div>
+
+  <!-- ADD WORKER -->
+  <div class="add-worker-row">
+    <button class="btn btn-ghost btn-sm" onclick="openAddWorker()">➕ Dodaj stolarza</button>
+  </div>
+
+  <!-- WORKERS LIST -->
+  <div id="workers-list"><div class="loader">Ładowanie pracowników…</div></div>
+
+  <!-- INNE DZIAŁY -->
+  <div class="inne-dzialy-section" id="inne-dzialy-section">
+    <div class="inne-dzialy-header" onclick="toggleInneDzialy()">
+      <div class="inne-dzialy-title">Inne działy</div>
+      <span class="inne-dzialy-chevron" id="inne-dzialy-chevron">▼</span>
+    </div>
+    <div class="inne-dzialy-body" id="inne-dzialy-body">
+      <!-- rendered by JS -->
+    </div>
+  </div>
+
+</div>
+
+<!-- ── SAVE BAR ── -->
+<div class="save-bar">
+  <div class="save-bar-inner">
+    <button class="btn-save" id="btn-save" onclick="saveDay()">💾 Zapisz dzień</button>
+  </div>
+</div>
+
+<!-- ── MODAL ── -->
+<div class="overlay" id="overlay" onclick="closeOverlayOutside(event)">
+  <div class="modal" id="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title"></div>
+      <button class="modal-close" onclick="closeModal()">×</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- ── TOAST ── -->
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   CONFIG — zmień PAT tutaj
+   ============================================================ */
+const CONFIG = {
+  PAT: localStorage.getItem('zespol_pat') || '',
+  BASE_ID: 'appRRfPQmFA8t1DS5',
+
+  // Tabele
+  T_ZESPOL:   'tblyMHVLL0KlZ9dyQ',
+  T_DZIENNIK: 'tblDUwNznsWNSGPp1',
+  T_DZIALY:   'tbl07n2EXw9ZOEpfA',
+  T_JEDNOSTKI:'tblrEjt9JSPHTyOBo',
+  T_ZADANIA:  'tblEKGgbKP8sZdbDZ',
+
+  // Pola Zespol
+  F_Z_IMIE:    'fldYZhEcstsE9evR9',
+  F_Z_AKTYWNY: 'fldNgK1ibm7vWPQC8',
+  F_Z_ROLA:    'fldRzmfXKKoOsNDfo',
+  F_Z_ZMIANA:  'fldM5PzkstzjBR0dt',
+  F_Z_NOTATKI: 'fld4MF9Tdo5icgQYs',
+
+  // Pola Dziennik
+  F_D_DATA:     'fldnfo4vq6INlGGsD',
+  F_D_PRACOWNIK:'fldpjZmWtKgHzfNV8',
+  F_D_JEDNOSTKA:'flddr254JB3Zb1p1Y',
+  F_D_OBECNY:   'fldf050rTaS8KduBR',
+  F_D_ZMIANA:   'fldbDaIbifVn9IkQu',
+  F_D_NADG:     'fldDeShoayJegnnSt',
+  F_D_ZAD_DN:   'fld4RA9aCHsO9Ir42',
+  F_D_ZAD_NG:   'fldPY2oe5j8gTEwHK',
+  // F_D_GODZINY — formula READ-ONLY, nigdy nie wysyłać
+  F_D_NOTATKI:  'fldaegQRlODbZhai3',
+
+  // Pola Dzialy
+  F_DZ_DATA:    'fld40kA1e3iYl4SqG',
+  F_DZ_DZIAL:   'fld7L9n2DJsinuij7',
+  F_DZ_JEDN:    'flddKnu55rWUmZYRX',
+  F_DZ_LICZBA:  'fldcMgzUI01eRveVS',
+  F_DZ_NADG:    'fldwAgt8XoWrxxJEM',
+  F_DZ_NOTATKI: 'fldkbK5DVyyRtuNZ5',
+
+  // Pola Jednostki
+  F_J_NAZWA:  'fldmflxcb1MRnsDyH',
+  F_J_STATUS: 'fldm63xznbAVhG1EU',
+
+  // Pola Zadania
+  F_ZAD_NAZWA:    'fldIz7cevBB0lodSo',
+  F_ZAD_JEDNOSTKA:'fldlgtgyoTpQ0w8tr',
+  F_ZAD_STREFA:   'flddKFNNANVMM7FZt',
+  F_ZAD_STATUS:   'fldJ6nX3QPp6JRhyH',
+
+  PIN: '2811',
+  CACHE_VERSION: 1
+};
+
+/* ============================================================
+   DZIAŁY
+   ============================================================ */
+const DZIALY = ['Mechanicy','Elektrycy','Płytkarze','Zaprawki','Szyby','Monterzy'];
+
+/* ============================================================
+   STATE
+   ============================================================ */
+let state = {
+  date: todayISO(),
+  unitId: null,
+  unitName: '',
+  workers: [],       // {id, name, rola, zmianaDefault}
+  entries: {},       // workerId → {obecny, zmiana, nadgodziny, zadanieDniowka:[], zadanieNG:[], notatki, _recordId}
+  dzialy: {},        // nazwadzialu → {liczba, nadgodziny, _recordId}
+  zadania: [],       // cache zadań jednostki
+  jednostki: [],     // cache jednostek W budowie
+  unsaved: false
+};
+
+/* ============================================================
+   HELPERS
+   ============================================================ */
+function todayISO() {
+  return new Date().toISOString().slice(0,10);
+}
+function isoToDisplay(iso) {
+  // 2025-06-11 → 11/6/2025
+  const [y,m,d] = iso.split('-');
+  return `${parseInt(d)}/${parseInt(m)}/${y}`;
+}
+function displayToISO(display) {
+  // 11/6/2025 → 2025-06-11
+  const parts = display.split('/');
+  if (parts.length !== 3) return '';
+  const [d,m,y] = parts;
+  return `${y}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+}
+function airtableDate(iso) {
+  // Airtable date field: ISO format YYYY-MM-DD
+  return iso;
+}
+function esc(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function markUnsaved() {
+  state.unsaved = true;
+  document.getElementById('unsaved-dot').classList.add('show');
+}
+function clearUnsaved() {
+  state.unsaved = false;
+  document.getElementById('unsaved-dot').classList.remove('show');
+}
+
+/* ============================================================
+   API
+   ============================================================ */
+async function api(method, path, body) {
+  if (!CONFIG.PAT) {
+    const pat = prompt('Podaj Personal Access Token Airtable:');
+    if (pat) { CONFIG.PAT = pat; localStorage.setItem('zespol_pat', pat); }
+    else throw new Error('Brak PAT');
+  }
+  const url = `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${path}`;
+  const opts = {
+    method,
+    headers: {
+      'Authorization': `Bearer ${CONFIG.PAT}`,
+      'Content-Type': 'application/json'
+    }
+  };
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(url, opts);
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`Airtable ${res.status}: ${err}`);
+  }
+  return res.json();
+}
+
+async function fetchAll(tableId, params = {}) {
+  let records = [];
+  let offset = null;
+  do {
+    const p = new URLSearchParams(params);
+    if (offset) p.set('offset', offset);
+    const data = await api('GET', `${tableId}?${p}`);
+    records = records.concat(data.records || []);
+    offset = data.offset;
+  } while (offset);
+  return records;
+}
+
+/* ============================================================
+   PIN
+   ============================================================ */
+let pinBuf = '';
+function pinKey(k) {
+  if (k === 'del') {
+    pinBuf = pinBuf.slice(0,-1);
+  } else {
+    if (pinBuf.length >= 4) return;
+    pinBuf += k;
+  }
+  updatePinDots();
+  if (pinBuf.length === 4) {
+    if (pinBuf === CONFIG.PIN) {
+      document.getElementById('pin-screen').style.display = 'none';
+    } else {
+      document.getElementById('pin-error').textContent = 'Nieprawidłowy PIN';
+      document.querySelectorAll('.pin-key').forEach(b => b.classList.add('shake'));
+      setTimeout(() => {
+        document.querySelectorAll('.pin-key').forEach(b => b.classList.remove('shake'));
+        pinBuf = '';
+        updatePinDots();
+        document.getElementById('pin-error').textContent = '';
+      }, 600);
+    }
+  }
+}
+function updatePinDots() {
+  for (let i=0;i<4;i++) {
+    document.getElementById('pd'+i).classList.toggle('filled', i < pinBuf.length);
+  }
+}
+function pinSkip() {
+  document.getElementById('pin-screen').style.display = 'none';
+}
+
+/* ============================================================
+   INIT
+   ============================================================ */
+async function init() {
+  // Set date
+  const dateEl = document.getElementById('input-date');
+  dateEl.value = state.date;
+  document.getElementById('topbar-date').textContent = isoToDisplay(state.date);
+
+  // Render inne dzialy
+  renderInneDzialy();
+
+  try {
+    await loadJednostki();
+    await loadWorkers();
+    await loadExistingEntries();
+    renderWorkers();
+    updateSummary();
+  } catch(e) {
+    showToast('Błąd ładowania: ' + e.message, 'error');
+    console.error(e);
+  }
+}
+
+/* ============================================================
+   JEDNOSTKI
+   ============================================================ */
+async function loadJednostki() {
+  const records = await fetchAll(CONFIG.T_JEDNOSTKI, {
+    filterByFormula: `{${CONFIG.F_J_STATUS}} = "W budowie"`,
+    fields: [CONFIG.F_J_NAZWA, CONFIG.F_J_STATUS]
+  });
+  state.jednostki = records.map(r => ({
+    id: r.id,
+    name: r.fields[CONFIG.F_J_NAZWA] || ''
+  }));
+
+  const sel = document.getElementById('input-unit');
+  sel.innerHTML = state.jednostki.map(j =>
+    `<option value="${esc(j.id)}">${esc(j.name)}</option>`
+  ).join('');
+
+  if (state.jednostki.length > 0) {
+    state.unitId = state.jednostki[0].id;
+    state.unitName = state.jednostki[0].name;
+    sel.value = state.unitId;
+  }
+}
+
+function onUnitChange() {
+  const sel = document.getElementById('input-unit');
+  state.unitId = sel.value;
+  const found = state.jednostki.find(j => j.id === state.unitId);
+  state.unitName = found ? found.name : '';
+  state.zadania = []; // invalidate cache
+  loadExistingEntries().then(() => renderWorkers());
+}
+
+/* ============================================================
+   WORKERS
+   ============================================================ */
+async function loadWorkers() {
+  const records = await fetchAll(CONFIG.T_ZESPOL, {
+    filterByFormula: `{${CONFIG.F_Z_AKTYWNY}} = 1`,
+    sort: [{ field: CONFIG.F_Z_IMIE, direction: 'asc' }],
+    fields: [CONFIG.F_Z_IMIE, CONFIG.F_Z_ROLA, CONFIG.F_Z_ZMIANA, CONFIG.F_Z_AKTYWNY]
+  });
+
+  state.workers = [];
+  for (const r of records) {
+    const name = (r.fields[CONFIG.F_Z_IMIE] || '').trim();
+    if (!name) {
+      console.warn('⚠ Pusty rekord w Zespol:', r.id);
+      showToast('⚠ znaleziono pusty rekord w Zespol', 'warn');
+      continue;
+    }
+    state.workers.push({
+      id: r.id,
+      name,
+      rola: r.fields[CONFIG.F_Z_ROLA] || 'Stolarz',
+      zmianaDefault: r.fields[CONFIG.F_Z_ZMIANA] || '1 zmiana'
+    });
+  }
+
+  // init entries for workers not yet in state
+  for (const w of state.workers) {
+    if (!state.entries[w.id]) {
+      state.entries[w.id] = {
+        obecny: true,
+        zmiana: w.zmianaDefault || '1 zmiana',
+        nadgodziny: 0,
+        zadanieDniowka: [],
+        zadanieNG: [],
+        notatki: '',
+        _recordId: null
+      };
+    }
+  }
+}
+
+/* ============================================================
+   EXISTING ENTRIES (upsert logic — read before save)
+   ============================================================ */
+async function loadExistingEntries() {
+  if (!state.unitId) return;
+  const dateStr = airtableDate(state.date);
+  const records = await fetchAll(CONFIG.T_DZIENNIK, {
+    filterByFormula: `{${CONFIG.F_D_DATA}} = "${dateStr}"`,
+    fields: [
+      CONFIG.F_D_DATA, CONFIG.F_D_PRACOWNIK, CONFIG.F_D_JEDNOSTKA,
+      CONFIG.F_D_OBECNY, CONFIG.F_D_ZMIANA, CONFIG.F_D_NADG,
+      CONFIG.F_D_ZAD_DN, CONFIG.F_D_ZAD_NG, CONFIG.F_D_NOTATKI
+    ]
+  });
+
+  for (const r of records) {
+    const pracIds = r.fields[CONFIG.F_D_PRACOWNIK] || [];
+    if (pracIds.length === 0) continue;
+    const wId = pracIds[0];
+    const worker = state.workers.find(w => w.id === wId);
+    if (!worker) continue;
+
+    const unitIds = r.fields[CONFIG.F_D_JEDNOSTKA] || [];
+    if (state.unitId && unitIds.length > 0 && unitIds[0] !== state.unitId) continue;
+
+    state.entries[wId] = {
+      obecny: !!r.fields[CONFIG.F_D_OBECNY],
+      zmiana: r.fields[CONFIG.F_D_ZMIANA] || worker.zmianaDefault || '1 zmiana',
+      nadgodziny: r.fields[CONFIG.F_D_NADG] || 0,
+      zadanieDniowka: r.fields[CONFIG.F_D_ZAD_DN] || [],
+      zadanieNG: r.fields[CONFIG.F_D_ZAD_NG] || [],
+      notatki: r.fields[CONFIG.F_D_NOTATKI] || '',
+      _recordId: r.id
+    };
+  }
+
+  // Also load existing dzialy records
+  const dzialyRec = await fetchAll(CONFIG.T_DZIALY, {
+    filterByFormula: `{${CONFIG.F_DZ_DATA}} = "${dateStr}"`,
+    fields: [CONFIG.F_DZ_DATA, CONFIG.F_DZ_DZIAL, CONFIG.F_DZ_JEDN, CONFIG.F_DZ_LICZBA, CONFIG.F_DZ_NADG, CONFIG.F_DZ_NOTATKI]
+  });
+  for (const r of dzialyRec) {
+    const unitIds = r.fields[CONFIG.F_DZ_JEDN] || [];
+    if (state.unitId && unitIds.length > 0 && unitIds[0] !== state.unitId) continue;
+    const nazwa = r.fields[CONFIG.F_DZ_DZIAL] || '';
+    if (!nazwa) continue;
+    if (!state.dzialy[nazwa]) state.dzialy[nazwa] = { liczba: 0, nadgodziny: 0, _recordId: null };
+    state.dzialy[nazwa].liczba = r.fields[CONFIG.F_DZ_LICZBA] || 0;
+    state.dzialy[nazwa].nadgodziny = r.fields[CONFIG.F_DZ_NADG] || 0;
+    state.dzialy[nazwa]._recordId = r.id;
+  }
+}
+
+/* ============================================================
+   RENDER WORKERS
+   ============================================================ */
+function renderWorkers() {
+  const el = document.getElementById('workers-list');
+  if (state.workers.length === 0) {
+    el.innerHTML = '<div class="empty">Brak aktywnych pracowników.<br>Dodaj stolarza przyciskiem powyżej.</div>';
+    return;
+  }
+  el.innerHTML = state.workers.map(w => workerCard(w)).join('');
+  updateSummary();
+}
+
+function workerCard(w) {
+  const e = state.entries[w.id] || {};
+  const present = e.obecny !== false;
+  const zmiana = e.zmiana || w.zmianaDefault || '1 zmiana';
+  const nadg = e.nadgodziny || 0;
+  const zad1 = e.zadanieDniowka || [];
+  const zad2 = e.zadanieNG || [];
+
+  const presentClass = present ? 'present' : 'absent';
+
+  const zad1Names = zad1.map(id => {
+    const z = state.zadania.find(t => t.id === id);
+    return z ? z.name : id;
+  });
+  const zad2Names = zad2.map(id => {
+    const z = state.zadania.find(t => t.id === id);
+    return z ? z.name : id;
+  });
+
+  const detailHtml = present ? `
+    <div class="worker-detail" id="detail-${w.id}">
+      <div class="detail-row">
+        <span class="detail-label">Zmiana</span>
+        <div class="zmiana-switch">
+          <button onclick="setZmiana('${w.id}','1 zmiana')" class="${zmiana==='1 zmiana'?'active':''}">1</button>
+          <button onclick="setZmiana('${w.id}','2 zmiana')" class="${zmiana==='2 zmiana'?'active':''}">2</button>
+        </div>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Nadgodziny (h)</span>
+        <div class="stepper" id="stepper-${w.id}">
+          <button onclick="changeNadg('${w.id}',-0.5)">−</button>
+          <span class="stepper-val" id="nadg-val-${w.id}">${nadg}</span>
+          <button onclick="changeNadg('${w.id}',0.5)">+</button>
+        </div>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Zadanie dniówka</span>
+        <div id="zad-dn-${w.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${zad1Names.map((n,i) => `<span class="zadanie-tag">${esc(n)}<button class="zadanie-clear" onclick="removeZadanie('${w.id}','dn',${zad1[i]})">×</button></span>`).join('')}
+          <button class="btn-zadanie" onclick="openZadanieModal('${w.id}','dn')">+ Wybierz</button>
+        </div>
+      </div>
+      ${nadg > 0 ? `
+      <div class="detail-row">
+        <span class="detail-label">Zadanie NG</span>
+        <div id="zad-ng-${w.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${zad2Names.map((n,i) => `<span class="zadanie-tag ng">${esc(n)}<button class="zadanie-clear" onclick="removeZadanie('${w.id}','ng',${zad2[i]})">×</button></span>`).join('')}
+          <button class="btn-zadanie ng" onclick="openZadanieModal('${w.id}','ng')">+ Wybierz</button>
+        </div>
+      </div>` : ''}
+    </div>` : '';
+
+  return `
+  <div class="worker-card ${presentClass}" id="card-${w.id}">
+    <div class="worker-card-header">
+      <div style="flex:1;min-width:0;">
+        <div class="worker-name">${esc(w.name)}</div>
+        <div class="worker-role">${esc(w.rola)}</div>
+      </div>
+      <div class="worker-controls">
+        <div class="toggle-wrap">
+          <label class="toggle" title="Obecny">
+            <input type="checkbox" ${present?'checked':''} onchange="toggleObecny('${w.id}',this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">${present?'Obecny':'Nieobecny'}</span>
+        </div>
+      </div>
+    </div>
+    ${detailHtml}
+  </div>`;
+}
+
+function updateSummary() {
+  let present = 0, absent = 0, totalNadg = 0;
+  for (const w of state.workers) {
+    const e = state.entries[w.id] || {};
+    if (e.obecny !== false) {
+      present++;
+      totalNadg += e.nadgodziny || 0;
+    } else {
+      absent++;
+    }
+  }
+  document.getElementById('sum-present').textContent = present;
+  document.getElementById('sum-absent').textContent = absent;
+  document.getElementById('sum-ot').textContent = totalNadg % 1 === 0 ? totalNadg+'h' : totalNadg+'h';
+}
+
+/* ============================================================
+   ENTRY MUTATIONS
+   ============================================================ */
+function getEntry(wid) {
+  if (!state.entries[wid]) {
+    const w = state.workers.find(x => x.id === wid);
+    state.entries[wid] = {
+      obecny: true,
+      zmiana: w ? (w.zmianaDefault || '1 zmiana') : '1 zmiana',
+      nadgodziny: 0, zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
+    };
+  }
+  return state.entries[wid];
+}
+
+function toggleObecny(wid, val) {
+  const e = getEntry(wid);
+  e.obecny = val;
+  if (!val) {
+    e.nadgodziny = 0;
+    e.zadanieDniowka = [];
+    e.zadanieNG = [];
+  }
+  markUnsaved();
+  reRenderCard(wid);
+  updateSummary();
+}
+
+function setZmiana(wid, val) {
+  getEntry(wid).zmiana = val;
+  markUnsaved();
+  // just update buttons
+  const det = document.getElementById('detail-'+wid);
+  if (det) {
+    det.querySelectorAll('.zmiana-switch button').forEach((b,i) => {
+      b.classList.toggle('active', (i===0 && val==='1 zmiana') || (i===1 && val==='2 zmiana'));
+    });
+  }
+}
+
+function changeNadg(wid, delta) {
+  const e = getEntry(wid);
+  let v = (e.nadgodziny || 0) + delta;
+  if (v < 0) v = 0;
+  if (v > 8) v = 8;
+  v = Math.round(v * 2) / 2;
+  e.nadgodziny = v;
+  markUnsaved();
+  const valEl = document.getElementById('nadg-val-'+wid);
+  if (valEl) valEl.textContent = v;
+  // show/hide NG zadanie row
+  reRenderCard(wid);
+  updateSummary();
+}
+
+function removeZadanie(wid, type, recId) {
+  const e = getEntry(wid);
+  if (type === 'dn') {
+    e.zadanieDniowka = e.zadanieDniowka.filter(x => x !== recId);
+  } else {
+    e.zadanieNG = e.zadanieNG.filter(x => x !== recId);
+  }
+  markUnsaved();
+  reRenderCard(wid);
+}
+
+function reRenderCard(wid) {
+  const w = state.workers.find(x => x.id === wid);
+  if (!w) return;
+  const old = document.getElementById('card-'+wid);
+  if (!old) return;
+  const tmp = document.createElement('div');
+  tmp.innerHTML = workerCard(w);
+  old.replaceWith(tmp.firstElementChild);
+}
+
+function onDateChange() {
+  state.date = document.getElementById('input-date').value;
+  document.getElementById('topbar-date').textContent = isoToDisplay(state.date);
+  // reset entries
+  state.entries = {};
+  state.dzialy = {};
+  for (const w of state.workers) {
+    state.entries[w.id] = {
+      obecny: true, zmiana: w.zmianaDefault || '1 zmiana',
+      nadgodziny: 0, zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
+    };
+  }
+  clearUnsaved();
+  loadExistingEntries().then(() => { renderWorkers(); renderInneDzialy(); });
+}
+
+/* ============================================================
+   INNE DZIAŁY
+   ============================================================ */
+let inneDzialyOpen = false;
+function toggleInneDzialy() {
+  inneDzialyOpen = !inneDzialyOpen;
+  document.getElementById('inne-dzialy-body').classList.toggle('open', inneDzialyOpen);
+  document.getElementById('inne-dzialy-chevron').classList.toggle('open', inneDzialyOpen);
+}
+
+function renderInneDzialy() {
+  const body = document.getElementById('inne-dzialy-body');
+  body.innerHTML = DZIALY.map(d => {
+    const dz = state.dzialy[d] || { liczba: 0, nadgodziny: 0 };
+    return `
+    <div class="dzial-row">
+      <div class="dzial-name">${esc(d)}</div>
+      <div class="dzial-fields">
+        <div>
+          <div class="dzial-field-label">Osób</div>
+          <div class="stepper">
+            <button onclick="changeDzial('${d}','liczba',-1)">−</button>
+            <span class="stepper-val" id="dz-l-${d}">${dz.liczba}</span>
+            <button onclick="changeDzial('${d}','liczba',1)">+</button>
+          </div>
+        </div>
+        <div>
+          <div class="dzial-field-label">Nadgodziny</div>
+          <div class="stepper">
+            <button onclick="changeDzial('${d}','nadgodziny',-0.5)">−</button>
+            <span class="stepper-val" id="dz-n-${d}">${dz.nadgodziny}</span>
+            <button onclick="changeDzial('${d}','nadgodziny',0.5)">+</button>
+          </div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function changeDzial(nazwa, field, delta) {
+  if (!state.dzialy[nazwa]) state.dzialy[nazwa] = { liczba: 0, nadgodziny: 0, _recordId: null };
+  let v = (state.dzialy[nazwa][field] || 0) + delta;
+  if (v < 0) v = 0;
+  if (field === 'liczba') v = Math.round(v);
+  else v = Math.round(v * 2) / 2;
+  state.dzialy[nazwa][field] = v;
+  markUnsaved();
+  const elId = field === 'liczba' ? `dz-l-${nazwa}` : `dz-n-${nazwa}`;
+  const el = document.getElementById(elId);
+  if (el) el.textContent = v;
+}
+
+/* ============================================================
+   ZADANIA MODAL
+   ============================================================ */
+let _zadModal = { wid: null, type: null };
+
+async function openZadanieModal(wid, type) {
+  _zadModal = { wid, type };
+  const w = state.workers.find(x => x.id === wid);
+  const label = type === 'dn' ? 'dniówka' : 'nadgodziny';
+  showModal(`Zadanie (${label}) — ${w ? w.name : ''}`,
+    `<input class="task-search" id="zad-search" placeholder="Szukaj zadania…" oninput="filterZadania()" autofocus>
+     <div class="task-list" id="zad-list"><div class="loader">Ładowanie…</div></div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
+     <button class="btn btn-primary" onclick="confirmZadania()">Zapisz wybór</button>`
+  );
+  if (state.zadania.length === 0) {
+    await loadZadania();
+  }
+  renderZadanieList();
+}
+
+async function loadZadania() {
+  if (!state.unitId) return;
+  const records = await fetchAll(CONFIG.T_ZADANIA, {
+    filterByFormula: `AND({${CONFIG.F_ZAD_JEDNOSTKA}} = "${state.unitId}", {${CONFIG.F_ZAD_STATUS}} != "Gotowe")`,
+    fields: [CONFIG.F_ZAD_NAZWA, CONFIG.F_ZAD_STREFA, CONFIG.F_ZAD_STATUS]
+  });
+  state.zadania = records.map(r => ({
+    id: r.id,
+    name: r.fields[CONFIG.F_ZAD_NAZWA] || '(bez nazwy)',
+    strefa: r.fields[CONFIG.F_ZAD_STREFA] || '',
+    status: r.fields[CONFIG.F_ZAD_STATUS] || ''
+  }));
+}
+
+function renderZadanieList(filter='') {
+  const list = document.getElementById('zad-list');
+  if (!list) return;
+  const e = state.entries[_zadModal.wid] || {};
+  const selected = _zadModal.type === 'dn' ? (e.zadanieDniowka || []) : (e.zadanieNG || []);
+  const fl = filter.toLowerCase();
+  const filtered = state.zadania.filter(z => !fl || z.name.toLowerCase().includes(fl) || z.strefa.toLowerCase().includes(fl));
+  if (filtered.length === 0) {
+    list.innerHTML = '<div class="empty">Brak zadań.</div>';
+    return;
+  }
+  list.innerHTML = filtered.map(z => {
+    const sel = selected.includes(z.id);
+    return `<div class="task-item ${sel?'selected':''}" onclick="toggleZadanieSelect('${z.id}')">
+      <span class="task-item-check">${sel?'☑':'☐'}</span>
+      <div class="task-item-body">
+        <div class="task-item-name">${esc(z.name)}</div>
+        ${z.strefa ? `<div class="task-item-meta">${esc(z.strefa)} · ${esc(z.status)}</div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function filterZadania() {
+  const v = document.getElementById('zad-search')?.value || '';
+  renderZadanieList(v);
+}
+
+function toggleZadanieSelect(zid) {
+  const e = getEntry(_zadModal.wid);
+  const arr = _zadModal.type === 'dn' ? e.zadanieDniowka : e.zadanieNG;
+  const idx = arr.indexOf(zid);
+  if (idx === -1) arr.push(zid);
+  else arr.splice(idx,1);
+  markUnsaved();
+  const filter = document.getElementById('zad-search')?.value || '';
+  renderZadanieList(filter);
+}
+
+function confirmZadania() {
+  closeModal();
+  reRenderCard(_zadModal.wid);
+}
+
+/* ============================================================
+   ADD WORKER MODAL
+   ============================================================ */
+function openAddWorker() {
+  showModal('Dodaj stolarza',
+    `<div class="form-row">
+       <label>Imię i nazwisko *</label>
+       <input id="new-imie" placeholder="np. Jan Kowalski" autofocus>
+     </div>
+     <div class="form-row">
+       <label>Rola</label>
+       <select id="new-rola">
+         <option value="Stolarz">Stolarz</option>
+         <option value="Pomocnik">Pomocnik</option>
+         <option value="Brygadzista">Brygadzista</option>
+         <option value="Kontraktor">Kontraktor</option>
+       </select>
+     </div>
+     <div class="form-row">
+       <label>Zmiana domyślna</label>
+       <select id="new-zmiana">
+         <option value="1 zmiana">1 zmiana</option>
+         <option value="2 zmiana">2 zmiana</option>
+       </select>
+     </div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
+     <button class="btn btn-primary" onclick="saveNewWorker()">Dodaj</button>`
+  );
+}
+
+async function saveNewWorker() {
+  const imie = (document.getElementById('new-imie')?.value || '').trim();
+  if (imie.length < 3) {
+    showToast('Nazwisko min. 3 znaki', 'error'); return;
+  }
+  const rola = document.getElementById('new-rola')?.value || 'Stolarz';
+  const zmiana = document.getElementById('new-zmiana')?.value || '1 zmiana';
+  closeModal();
+  try {
+    const res = await api('POST', CONFIG.T_ZESPOL, {
+      records: [{
+        fields: {
+          [CONFIG.F_Z_IMIE]: imie,
+          [CONFIG.F_Z_AKTYWNY]: true,
+          [CONFIG.F_Z_ROLA]: rola,
+          [CONFIG.F_Z_ZMIANA]: zmiana
+        }
+      }]
+    });
+    const r = res.records[0];
+    const newW = { id: r.id, name: imie, rola, zmianaDefault: zmiana };
+    state.workers.push(newW);
+    state.workers.sort((a,b) => a.name.localeCompare(b.name));
+    state.entries[r.id] = {
+      obecny: true, zmiana, nadgodziny: 0,
+      zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
+    };
+    renderWorkers();
+    showToast(`Dodano: ${imie}`, 'success');
+  } catch(e) {
+    showToast('Błąd dodawania: ' + e.message, 'error');
+  }
+}
+
+/* ============================================================
+   SAVE DAY
+   ============================================================ */
+async function saveDay() {
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  btn.classList.add('saving');
+  btn.textContent = 'Zapisywanie…';
+
+  try {
+    const dateStr = airtableDate(state.date);
+
+    // Build Dziennik payloads
+    const toCreate = [];
+    const toUpdate = [];
+
+    for (const w of state.workers) {
+      const e = state.entries[w.id];
+      if (!e) continue;
+
+      const fields = {
+        [CONFIG.F_D_DATA]: dateStr,
+        [CONFIG.F_D_PRACOWNIK]: [w.id],
+        [CONFIG.F_D_OBECNY]: !!e.obecny,
+        [CONFIG.F_D_ZMIANA]: e.zmiana || '1 zmiana',
+        [CONFIG.F_D_NADG]: e.obecny ? (e.nadgodziny || 0) : 0,
+        [CONFIG.F_D_NOTATKI]: e.notatki || ''
+      };
+
+      if (state.unitId) {
+        fields[CONFIG.F_D_JEDNOSTKA] = [state.unitId];
+      }
+
+      if (e.obecny) {
+        if (e.zadanieDniowka && e.zadanieDniowka.length > 0) {
+          fields[CONFIG.F_D_ZAD_DN] = e.zadanieDniowka;
+        }
+        if (e.zadanieNG && e.zadanieNG.length > 0 && e.nadgodziny > 0) {
+          fields[CONFIG.F_D_ZAD_NG] = e.zadanieNG;
+        }
+      } else {
+        fields[CONFIG.F_D_ZAD_DN] = [];
+        fields[CONFIG.F_D_ZAD_NG] = [];
+      }
+
+      if (e._recordId) {
+        toUpdate.push({ id: e._recordId, fields });
+      } else {
+        toCreate.push({ fields, _wid: w.id });
+      }
+    }
+
+    // Patch in batches of 10
+    for (let i=0; i<toUpdate.length; i+=10) {
+      const batch = toUpdate.slice(i,i+10).map(x => ({ id: x.id, fields: x.fields }));
+      await api('PATCH', CONFIG.T_DZIENNIK, { records: batch });
+    }
+
+    // Post in batches of 10
+    for (let i=0; i<toCreate.length; i+=10) {
+      const batch = toCreate.slice(i,i+10);
+      const res = await api('POST', CONFIG.T_DZIENNIK, {
+        records: batch.map(x => ({ fields: x.fields }))
+      });
+      res.records.forEach((r,j) => {
+        const wid = batch[j]._wid;
+        if (state.entries[wid]) state.entries[wid]._recordId = r.id;
+      });
+    }
+
+    // Save Dzialy
+    const dzialyToSave = DZIALY.filter(d => (state.dzialy[d]?.liczba || 0) > 0);
+    for (const d of dzialyToSave) {
+      const dz = state.dzialy[d];
+      const fields = {
+        [CONFIG.F_DZ_DATA]: dateStr,
+        [CONFIG.F_DZ_DZIAL]: d,
+        [CONFIG.F_DZ_LICZBA]: dz.liczba || 0,
+        [CONFIG.F_DZ_NADG]: dz.nadgodziny || 0,
+        [CONFIG.F_DZ_NOTATKI]: dz.notatki || ''
+      };
+      if (state.unitId) fields[CONFIG.F_DZ_JEDN] = [state.unitId];
+
+      if (dz._recordId) {
+        await api('PATCH', CONFIG.T_DZIALY, { records: [{ id: dz._recordId, fields }] });
+      } else {
+        const res = await api('POST', CONFIG.T_DZIALY, { records: [{ fields }] });
+        dz._recordId = res.records[0].id;
+      }
+    }
+
+    // Summary
+    const present = state.workers.filter(w => (state.entries[w.id]?.obecny !== false)).length;
+    const totalNadg = state.workers.reduce((s,w) => s + (state.entries[w.id]?.nadgodziny||0), 0);
+    const dateDisp = isoToDisplay(state.date);
+    showToast(`Zapisano ${dateDisp} — ${present} obecnych, Σ NG: ${totalNadg}h`, 'success');
+    clearUnsaved();
+
+  } catch(e) {
+    showToast('Błąd zapisu: ' + e.message, 'error');
+    console.error(e);
+  } finally {
+    btn.disabled = false;
+    btn.classList.remove('saving');
+    btn.textContent = '💾 Zapisz dzień';
+  }
+}
+
+/* ============================================================
+   MODAL HELPERS
+   ============================================================ */
+function showModal(title, body, footer) {
+  document.getElementById('modal-title').textContent = title;
+  document.getElementById('modal-body').innerHTML = body;
+  document.getElementById('modal-footer').innerHTML = footer || '';
+  document.getElementById('overlay').classList.add('open');
+}
+function closeModal() {
+  document.getElementById('overlay').classList.remove('open');
+}
+function closeOverlayOutside(e) {
+  if (e.target === document.getElementById('overlay')) closeModal();
+}
+
+/* ============================================================
+   TOAST
+   ============================================================ */
+let _toastTimer = null;
+function showToast(msg, type='') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' '+type : '');
+  t.classList.add('show');
+  if (_toastTimer) clearTimeout(_toastTimer);
+  _toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+/* ============================================================
+   BOOT
+   ============================================================ */
+window.addEventListener('load', init);
+</script>
+
+<!-- ── SERVICE WORKER ── -->
+<script>
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw-zespol.js?v=1').catch(()=>{});
+}
+</script>
+
+</body>
+</html>
