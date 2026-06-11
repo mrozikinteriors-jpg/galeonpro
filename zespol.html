@@ -56,6 +56,15 @@ body {
 }
 .topbar-brand span { color: var(--accent2); }
 .topbar-right { display: flex; align-items: center; gap: 8px; }
+.topbar-btn {
+  background: rgba(255,255,255,.1);
+  border: 1px solid rgba(255,255,255,.2);
+  color: #fff; padding: 6px 10px;
+  font-family: 'Inconsolata', monospace;
+  font-size: 12px; cursor: pointer; border-radius: 3px;
+  transition: all .15s; min-height: 36px;
+}
+.topbar-btn:hover { background: rgba(255,255,255,.2); }
 .unsaved-dot {
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--accent2);
@@ -482,6 +491,7 @@ body {
   <div class="topbar-right">
     <div class="unsaved-dot" id="unsaved-dot" title="Niezapisane zmiany"></div>
     <span style="font-size:10px;color:var(--muted);letter-spacing:1px;" id="topbar-date"></span>
+    <button class="topbar-btn" onclick="openConfig()" title="Ustawienia">⚙</button>
   </div>
 </div>
 
@@ -675,11 +685,7 @@ function clearUnsaved() {
    API
    ============================================================ */
 async function api(method, path, body) {
-  if (!CONFIG.PAT) {
-    const pat = prompt('Podaj Personal Access Token Airtable:');
-    if (pat) { CONFIG.PAT = pat; localStorage.setItem('zespol_pat', pat); }
-    else throw new Error('Brak PAT');
-  }
+  if (!CONFIG.PAT) throw new Error('Brak PAT — otwórz ⚙ Ustawienia i wpisz token');
   const url = `https://api.airtable.com/v0/${CONFIG.BASE_ID}/${path}`;
   const opts = {
     method,
@@ -747,6 +753,36 @@ function pinSkip() {
 }
 
 /* ============================================================
+   CONFIG MODAL
+   ============================================================ */
+function openConfig() {
+  showModal('⚙ Ustawienia',
+    `<div class="form-row">
+       <label>Personal Access Token (PAT) Airtable</label>
+       <input id="cfg-pat" type="password" placeholder="patXXXXXXXXXXXXXX.XXXX…"
+              value="${esc(CONFIG.PAT)}" autocomplete="off" spellcheck="false">
+       <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6;">
+         Znajdziesz go w Airtable → Account → Developer Hub → Personal Access Tokens.<br>
+         Token jest zapisywany lokalnie w przeglądarce.
+       </div>
+     </div>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
+     <button class="btn btn-primary" onclick="saveConfig()">Zapisz i załaduj</button>`
+  );
+  setTimeout(() => document.getElementById('cfg-pat')?.focus(), 100);
+}
+
+async function saveConfig() {
+  const pat = (document.getElementById('cfg-pat')?.value || '').trim();
+  if (!pat) { showToast('Wpisz token PAT', 'error'); return; }
+  CONFIG.PAT = pat;
+  localStorage.setItem('zespol_pat', pat);
+  closeModal();
+  showToast('Token zapisany — ładowanie danych…');
+  await loadData();
+}
+
+/* ============================================================
    INIT
    ============================================================ */
 async function init() {
@@ -758,6 +794,23 @@ async function init() {
   // Render inne dzialy
   renderInneDzialy();
 
+  if (!CONFIG.PAT) {
+    document.getElementById('workers-list').innerHTML =
+      '<div class="empty" style="padding:32px 16px;">' +
+      '<div style="font-size:28px;margin-bottom:12px;">🔑</div>' +
+      '<div style="font-family:\'Syne\',sans-serif;font-weight:700;font-size:14px;color:var(--text);margin-bottom:8px;">Wymagana konfiguracja</div>' +
+      '<div style="font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6;">Wpisz Personal Access Token Airtable,<br>żeby załadować dane.</div>' +
+      '<button class="btn btn-primary" onclick="openConfig()">⚙ Otwórz ustawienia</button>' +
+      '</div>';
+    openConfig();
+    return;
+  }
+
+  await loadData();
+}
+
+async function loadData() {
+  document.getElementById('workers-list').innerHTML = '<div class="loader">Ładowanie pracowników…</div>';
   try {
     await loadJednostki();
     await loadWorkers();
@@ -766,6 +819,9 @@ async function init() {
     updateSummary();
   } catch(e) {
     showToast('Błąd ładowania: ' + e.message, 'error');
+    document.getElementById('workers-list').innerHTML =
+      '<div class="empty">Błąd: ' + esc(e.message) + '<br><br>' +
+      '<button class="btn btn-ghost btn-sm" onclick="openConfig()">⚙ Sprawdź ustawienia</button></div>';
     console.error(e);
   }
 }
