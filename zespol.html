@@ -788,10 +788,40 @@ function openConfig(errorMsg) {
          Znajdziesz go w URL bazy Airtable: airtable.com/<strong style="color:var(--text);">appXXXXX</strong>/...
        </div>
      </div>`,
-    `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
+    `<button class="btn btn-ghost" onclick="testConnection()" id="btn-test-conn" style="margin-right:auto;">🔌 Testuj połączenie</button>
+     <button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
      <button class="btn btn-primary" onclick="saveConfig()">Zapisz i załaduj</button>`
   );
   setTimeout(() => document.getElementById('cfg-pat')?.focus(), 100);
+}
+
+async function testConnection() {
+  const pat  = (document.getElementById('cfg-pat')?.value  || '').trim();
+  const base = (document.getElementById('cfg-base')?.value || '').trim();
+  if (!pat || !base) { showToast('Uzupełnij oba pola', 'error'); return; }
+  const btn = document.getElementById('btn-test-conn');
+  btn.textContent = '⏳ Testowanie…'; btn.disabled = true;
+  try {
+    const res = await fetch(
+      `https://api.airtable.com/v0/meta/bases/${base}/tables`,
+      { headers: { Authorization: `Bearer ${pat}` } }
+    );
+    if (res.ok) {
+      btn.textContent = '✅ Połączenie OK';
+      btn.style.color = 'var(--green)';
+      showToast('Połączenie działa! Kliknij Zapisz i załaduj.', 'success');
+    } else {
+      const err = await res.json().catch(()=>({}));
+      btn.textContent = '❌ Błąd ' + res.status;
+      btn.style.color = 'var(--danger)';
+      showToast(`Błąd ${res.status}: ${err?.error?.message || 'sprawdź token i Base ID'}`, 'error');
+    }
+  } catch(e) {
+    btn.textContent = '❌ Brak sieci'; btn.style.color = 'var(--danger)';
+    showToast('Brak połączenia z internetem', 'error');
+  } finally {
+    btn.disabled = false;
+  }
 }
 
 async function saveConfig() {
@@ -1517,7 +1547,7 @@ window.addEventListener('load', init);
 <!-- ── SERVICE WORKER ── -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw-zespol.js?v=4').catch(()=>{});
+  navigator.serviceWorker.register('sw-zespol.js?v=5').catch(()=>{});
 }
 </script>
 
