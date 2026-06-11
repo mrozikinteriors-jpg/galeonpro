@@ -731,7 +731,7 @@ async function fetchAll(tableId, params = {}) {
   let records = [];
   let offset = null;
   do {
-    const data = await api('GET', `${tableId}?${buildQuery(params, offset)}`);
+    const data = await api('GET', `${tableId}?returnFieldsByFieldId=true&${buildQuery(params, offset)}`);
     records = records.concat(data.records || []);
     offset = data.offset;
   } while (offset);
