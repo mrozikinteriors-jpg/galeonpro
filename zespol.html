@@ -577,7 +577,7 @@ body {
    ============================================================ */
 const CONFIG = {
   PAT: localStorage.getItem('zespol_pat') || '',
-  BASE_ID: 'appRRfPQmFA8t1DS5',
+  BASE_ID: localStorage.getItem('zespol_baseid') || 'appRRfPQmFA8t1DS5',
 
   // Tabele
   T_ZESPOL:   'tblyMHVLL0KlZ9dyQ',
@@ -767,15 +767,24 @@ function openConfig(errorMsg) {
   showModal('⚙ Ustawienia',
     `${errHtml}
      <div class="form-row">
-       <label>Personal Access Token (PAT) Airtable</label>
+       <label>Personal Access Token (PAT)</label>
        <input id="cfg-pat" type="text" inputmode="text"
               placeholder="patXXXXXXXXXXXXXX.XXXX…"
-              value="${esc(CONFIG.PAT)}" autocomplete="off" spellcheck="false"
-              style="font-size:11px;">
+              value="${esc(CONFIG.PAT)}" autocomplete="off" autocorrect="off"
+              autocapitalize="none" spellcheck="false" style="font-size:11px;">
        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.7;">
-         Airtable → kliknij ikonę konta (prawy górny róg) →<br>
-         <strong>Developer Hub</strong> → <strong>Personal Access Tokens</strong> → Utwórz lub skopiuj token.<br>
-         Token zapisywany lokalnie w przeglądarce.
+         airtable.com → ikona konta → <strong>Developer Hub</strong> → <strong>Personal Access Tokens</strong><br>
+         Wymagane scope: <code>data.records:read</code> · <code>data.records:write</code> · <code>schema.bases:read</code><br>
+         Wymagany dostęp do base: <strong>${esc(CONFIG.BASE_ID)}</strong>
+       </div>
+     </div>
+     <div class="form-row">
+       <label>Base ID (zwykle nie trzeba zmieniać)</label>
+       <input id="cfg-base" type="text" inputmode="text"
+              value="${esc(CONFIG.BASE_ID)}" autocomplete="off" autocorrect="off"
+              autocapitalize="none" spellcheck="false" style="font-size:11px;">
+       <div style="font-size:11px;color:var(--muted);margin-top:4px;">
+         Znajdziesz go w URL bazy Airtable: airtable.com/<strong style="color:var(--text);">appXXXXX</strong>/...
        </div>
      </div>`,
     `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
@@ -785,12 +794,16 @@ function openConfig(errorMsg) {
 }
 
 async function saveConfig() {
-  const pat = (document.getElementById('cfg-pat')?.value || '').trim();
-  if (!pat) { showToast('Wpisz token PAT', 'error'); return; }
-  CONFIG.PAT = pat;
-  localStorage.setItem('zespol_pat', pat);
+  const pat  = (document.getElementById('cfg-pat')?.value  || '').trim();
+  const base = (document.getElementById('cfg-base')?.value || '').trim();
+  if (!pat)  { showToast('Wpisz token PAT', 'error'); return; }
+  if (!base) { showToast('Wpisz Base ID', 'error'); return; }
+  CONFIG.PAT     = pat;
+  CONFIG.BASE_ID = base;
+  localStorage.setItem('zespol_pat',    pat);
+  localStorage.setItem('zespol_baseid', base);
   closeModal();
-  showToast('Token zapisany — ładowanie danych…');
+  showToast('Zapisano — ładowanie danych…');
   await loadData();
 }
 
@@ -1503,7 +1516,7 @@ window.addEventListener('load', init);
 <!-- ── SERVICE WORKER ── -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw-zespol.js?v=2').catch(()=>{});
+  navigator.serviceWorker.register('sw-zespol.js?v=3').catch(()=>{});
 }
 </script>
 
