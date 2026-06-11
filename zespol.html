@@ -708,13 +708,30 @@ async function api(method, path, body) {
   return res.json();
 }
 
+function buildQuery(params, offset) {
+  // Airtable wymaga fields[]=fld1&fields[]=fld2 i sort[0][field]=...
+  const parts = [];
+  for (const [k, v] of Object.entries(params)) {
+    if (k === 'fields' && Array.isArray(v)) {
+      v.forEach(f => parts.push(`fields%5B%5D=${encodeURIComponent(f)}`));
+    } else if (k === 'sort' && Array.isArray(v)) {
+      v.forEach((s, i) => {
+        parts.push(`sort%5B${i}%5D%5Bfield%5D=${encodeURIComponent(s.field)}`);
+        if (s.direction) parts.push(`sort%5B${i}%5D%5Bdirection%5D=${encodeURIComponent(s.direction)}`);
+      });
+    } else {
+      parts.push(`${encodeURIComponent(k)}=${encodeURIComponent(v)}`);
+    }
+  }
+  if (offset) parts.push(`offset=${encodeURIComponent(offset)}`);
+  return parts.join('&');
+}
+
 async function fetchAll(tableId, params = {}) {
   let records = [];
   let offset = null;
   do {
-    const p = new URLSearchParams(params);
-    if (offset) p.set('offset', offset);
-    const data = await api('GET', `${tableId}?${p}`);
+    const data = await api('GET', `${tableId}?${buildQuery(params, offset)}`);
     records = records.concat(data.records || []);
     offset = data.offset;
   } while (offset);
