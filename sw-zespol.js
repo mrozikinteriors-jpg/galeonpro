@@ -1,4 +1,4 @@
-const CACHE = 'zespol-v1';
+const CACHE = 'zespol-v2';
 const ASSETS = [
   '/galeonpro/zespol.html',
   'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inconsolata:wght@300;400;500&display=swap'
