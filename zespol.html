@@ -775,6 +775,7 @@ function openConfig(errorMsg) {
        <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.7;">
          airtable.com → ikona konta → <strong>Developer Hub</strong> → <strong>Personal Access Tokens</strong><br>
          Wymagane scope: <code>data.records:read</code> · <code>data.records:write</code> · <code>schema.bases:read</code><br>
+         (zaznacz wszystkie trzy w kroku "Scopes")<br>
          Wymagany dostęp do base: <strong>${esc(CONFIG.BASE_ID)}</strong>
        </div>
      </div>
@@ -1516,7 +1517,7 @@ window.addEventListener('load', init);
 <!-- ── SERVICE WORKER ── -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw-zespol.js?v=3').catch(()=>{});
+  navigator.serviceWorker.register('sw-zespol.js?v=4').catch(()=>{});
 }
 </script>
 
