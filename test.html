@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Test Airtable</title>
+<style>
+  body { background: #111; color: #eee; font-family: sans-serif; padding: 2rem; max-width: 600px; }
+  input { width: 100%; padding: .6rem; margin: .5rem 0 1rem; background: #222; color: #eee; border: 1px solid #444; border-radius: 6px; font-size: .9rem; }
+  button { padding: .7rem 1.5rem; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-size: 1rem; cursor: pointer; }
+  pre { background: #222; padding: 1rem; border-radius: 8px; white-space: pre-wrap; margin-top: 1rem; }
+</style>
+</head>
+<body>
+<h2>Test połączenia Airtable — Zespol</h2>
+<label>Twój PAT (nie jest zapisywany):</label>
+<input id="pat" type="password" placeholder="patXXXXXX…">
+<button onclick="test()">Testuj połączenie</button>
+<pre id="out"></pre>
+<script>
+const BASE = 'appRRfPQmFA8t1DS5';
+const URL  = `https://api.airtable.com/v0/${BASE}/tblyMHVLL0KlZ9dyQ?maxRecords=3`;
+
+async function test() {
+  const pat = document.getElementById('pat').value.trim();
+  if (!pat) { document.getElementById('out').textContent = 'Wklej PAT.'; return; }
+  document.getElementById('out').textContent = 'Ładowanie…';
+  try {
+    const r = await fetch(URL, { headers: { Authorization: `Bearer ${pat}` } });
+    const data = await r.json();
+    if (data.error) { document.getElementById('out').textContent = 'BŁĄD: ' + JSON.stringify(data.error); return; }
+    const names = data.records.map(rec => rec.fields['fldYZhEcstsE9evR9'] || '(brak nazwiska)');
+    document.getElementById('out').textContent = 'OK ✓\n\nPobrane nazwiska:\n' + names.join('\n');
+  } catch(e) {
+    document.getElementById('out').textContent = 'BŁĄD SIECI: ' + e;
+  }
+}
+</script>
+</body>
+</html>
