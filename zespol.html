@@ -698,6 +698,11 @@ async function api(method, path, body) {
   const res = await fetch(url, opts);
   if (!res.ok) {
     const err = await res.text();
+    if (res.status === 401 || res.status === 403) {
+      CONFIG.PAT = '';
+      localStorage.removeItem('zespol_pat');
+      openConfig('⚠ Token nieprawidłowy lub wygasł. Wpisz nowy PAT.');
+    }
     throw new Error(`Airtable ${res.status}: ${err}`);
   }
   return res.json();
@@ -755,15 +760,22 @@ function pinSkip() {
 /* ============================================================
    CONFIG MODAL
    ============================================================ */
-function openConfig() {
+function openConfig(errorMsg) {
+  const errHtml = errorMsg
+    ? `<div style="background:var(--danger-light);border:1px solid #f5c6c2;border-radius:4px;padding:10px 12px;font-size:12px;color:var(--danger);margin-bottom:12px;">${esc(errorMsg)}</div>`
+    : '';
   showModal('⚙ Ustawienia',
-    `<div class="form-row">
+    `${errHtml}
+     <div class="form-row">
        <label>Personal Access Token (PAT) Airtable</label>
-       <input id="cfg-pat" type="password" placeholder="patXXXXXXXXXXXXXX.XXXX…"
-              value="${esc(CONFIG.PAT)}" autocomplete="off" spellcheck="false">
-       <div style="font-size:11px;color:var(--muted);margin-top:4px;line-height:1.6;">
-         Znajdziesz go w Airtable → Account → Developer Hub → Personal Access Tokens.<br>
-         Token jest zapisywany lokalnie w przeglądarce.
+       <input id="cfg-pat" type="text" inputmode="text"
+              placeholder="patXXXXXXXXXXXXXX.XXXX…"
+              value="${esc(CONFIG.PAT)}" autocomplete="off" spellcheck="false"
+              style="font-size:11px;">
+       <div style="font-size:11px;color:var(--muted);margin-top:6px;line-height:1.7;">
+         Airtable → kliknij ikonę konta (prawy górny róg) →<br>
+         <strong>Developer Hub</strong> → <strong>Personal Access Tokens</strong> → Utwórz lub skopiuj token.<br>
+         Token zapisywany lokalnie w przeglądarce.
        </div>
      </div>`,
     `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
@@ -1491,7 +1503,7 @@ window.addEventListener('load', init);
 <!-- ── SERVICE WORKER ── -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw-zespol.js?v=1').catch(()=>{});
+  navigator.serviceWorker.register('sw-zespol.js?v=2').catch(()=>{});
 }
 </script>
 
