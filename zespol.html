@@ -608,6 +608,9 @@ const CONFIG = {
   F_D_NADG:     'fldDeShoayJegnnSt',
   F_D_ZAD_DN:   'fld4RA9aCHsO9Ir42',
   F_D_ZAD_NG:   'fldPY2oe5j8gTEwHK',
+  F_D_PRACA_SOB:'fldkdfgUpN9sdkGTw',
+  F_D_NADG_SOB: 'fld5CSqwnzSUEbxhM',
+  F_D_ZAD_SOB:  'fldQ8PoxiYgkRf2zS',
   // F_D_GODZINY — formula READ-ONLY, nigdy nie wysyłać
   F_D_NOTATKI:  'fldaegQRlODbZhai3',
 
@@ -1004,10 +1007,9 @@ async function loadWorkers() {
         zmiana: w.zmianaDefault || '1 zmiana',
         nadgodziny: 0,
         kabina: w.kabinaDefault || null,
-        zadanieDniowka: [],
-        zadanieNG: [],
-        notatki: '',
-        _recordId: null
+        zadanieDniowka: [], zadanieNG: [],
+        pracaSob: false, nadgSob: 0, zadanieSob: [],
+        notatki: '', _recordId: null
       };
     }
   }
@@ -1045,6 +1047,9 @@ async function loadExistingEntries() {
       kabina: (r.fields[CONFIG.F_D_KABINA] || [])[0] || worker.kabinaDefault || null,
       zadanieDniowka: r.fields[CONFIG.F_D_ZAD_DN] || [],
       zadanieNG: r.fields[CONFIG.F_D_ZAD_NG] || [],
+      pracaSob: !!r.fields[CONFIG.F_D_PRACA_SOB],
+      nadgSob: r.fields[CONFIG.F_D_NADG_SOB] || 0,
+      zadanieSob: r.fields[CONFIG.F_D_ZAD_SOB] || [],
       notatki: r.fields[CONFIG.F_D_NOTATKI] || '',
       _recordId: r.id
     };
@@ -1155,14 +1160,43 @@ function workerCard(w) {
 
   const presentClass = present ? 'present' : 'absent';
 
-  const zad1Names = zad1.map(id => {
-    const z = state.zadania.find(t => t.id === id);
-    return z ? z.name : id;
-  });
-  const zad2Names = zad2.map(id => {
-    const z = state.zadania.find(t => t.id === id);
-    return z ? z.name : id;
-  });
+  const isFriday = new Date(state.date).getDay() === 5;
+  const pracaSob = e.pracaSob || false;
+  const nadgSob = e.nadgSob || 0;
+  const zad3 = e.zadanieSob || [];
+
+  const zadName = id => { const z = state.zadania.find(t => t.id === id); return z ? z.name : id; };
+  const zad1Names = zad1.map(zadName);
+  const zad2Names = zad2.map(zadName);
+  const zad3Names = zad3.map(zadName);
+
+  const sobotaHtml = (isFriday || pracaSob) ? `
+      <div class="detail-row" style="margin-top:4px;padding-top:10px;border-top:1px dashed var(--border);">
+        <span class="detail-label" style="color:var(--accent2);">🗓 Sobota</span>
+        <div class="toggle-wrap">
+          <label class="toggle" title="Praca w sobotę">
+            <input type="checkbox" ${pracaSob?'checked':''} onchange="togglePracaSob('${w.id}',this.checked)">
+            <span class="toggle-slider"></span>
+          </label>
+          <span class="toggle-label">${pracaSob?'Pracuje':'Nie pracuje'}</span>
+        </div>
+      </div>
+      ${pracaSob ? `
+      <div class="detail-row">
+        <span class="detail-label">NG sobota (h)</span>
+        <div class="stepper">
+          <button onclick="changeNadgSob('${w.id}',-0.5)">−</button>
+          <span class="stepper-val" id="nadg-sob-val-${w.id}">${nadgSob}</span>
+          <button onclick="changeNadgSob('${w.id}',0.5)">+</button>
+        </div>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Zadanie sobota</span>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${zad3Names.map((n,i) => `<span class="zadanie-tag ng">${esc(n)}<button class="zadanie-clear" onclick="removeZadanie('${w.id}','sob','${zad3[i]}')">×</button></span>`).join('')}
+          <button class="btn-zadanie ng" onclick="openZadanieModal('${w.id}','sob')">+ Wybierz</button>
+        </div>
+      </div>` : ''}` : '';
 
   const detailHtml = present ? `
     <div class="worker-detail" id="detail-${w.id}">
@@ -1175,7 +1209,7 @@ function workerCard(w) {
       </div>
       <div class="detail-row">
         <span class="detail-label">Nadgodziny (h)</span>
-        <div class="stepper" id="stepper-${w.id}">
+        <div class="stepper">
           <button onclick="changeNadg('${w.id}',-0.5)">−</button>
           <span class="stepper-val" id="nadg-val-${w.id}">${nadg}</span>
           <button onclick="changeNadg('${w.id}',0.5)">+</button>
@@ -1187,19 +1221,20 @@ function workerCard(w) {
       </div>
       <div class="detail-row">
         <span class="detail-label">Zadanie dniówka</span>
-        <div id="zad-dn-${w.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          ${zad1Names.map((n,i) => `<span class="zadanie-tag">${esc(n)}<button class="zadanie-clear" onclick="removeZadanie('${w.id}','dn',${zad1[i]})">×</button></span>`).join('')}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${zad1Names.map((n,i) => `<span class="zadanie-tag">${esc(n)}<button class="zadanie-clear" onclick="removeZadanie('${w.id}','dn','${zad1[i]}')">×</button></span>`).join('')}
           <button class="btn-zadanie" onclick="openZadanieModal('${w.id}','dn')">+ Wybierz</button>
         </div>
       </div>
       ${nadg > 0 ? `
       <div class="detail-row">
         <span class="detail-label">Zadanie NG</span>
-        <div id="zad-ng-${w.id}" style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
-          ${zad2Names.map((n,i) => `<span class="zadanie-tag ng">${esc(n)}<button class="zadanie-clear" onclick="removeZadanie('${w.id}','ng',${zad2[i]})">×</button></span>`).join('')}
+        <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;">
+          ${zad2Names.map((n,i) => `<span class="zadanie-tag ng">${esc(n)}<button class="zadanie-clear" onclick="removeZadanie('${w.id}','ng','${zad2[i]}')">×</button></span>`).join('')}
           <button class="btn-zadanie ng" onclick="openZadanieModal('${w.id}','ng')">+ Wybierz</button>
         </div>
       </div>` : ''}
+      ${sobotaHtml}
     </div>` : '';
 
   return `
@@ -1249,7 +1284,7 @@ function getEntry(wid) {
       obecny: false,
       zmiana: w ? (w.zmianaDefault || '1 zmiana') : '1 zmiana',
       nadgodziny: 0, kabina: w ? (w.kabinaDefault || null) : null,
-      zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
+      zadanieDniowka: [], zadanieNG: [], pracaSob: false, nadgSob: 0, zadanieSob: [], notatki: '', _recordId: null
     };
   }
   return state.entries[wid];
@@ -1295,12 +1330,33 @@ function changeNadg(wid, delta) {
   updateSummary();
 }
 
+function togglePracaSob(wid, val) {
+  const e = getEntry(wid);
+  e.pracaSob = val;
+  if (!val) { e.nadgSob = 0; e.zadanieSob = []; }
+  markUnsaved();
+  reRenderCard(wid);
+}
+
+function changeNadgSob(wid, delta) {
+  const e = getEntry(wid);
+  let v = Math.round(((e.nadgSob || 0) + delta) * 2) / 2;
+  if (v < 0) v = 0;
+  if (v > 8) v = 8;
+  e.nadgSob = v;
+  markUnsaved();
+  const el = document.getElementById('nadg-sob-val-' + wid);
+  if (el) el.textContent = v;
+}
+
 function removeZadanie(wid, type, recId) {
   const e = getEntry(wid);
   if (type === 'dn') {
     e.zadanieDniowka = e.zadanieDniowka.filter(x => x !== recId);
-  } else {
+  } else if (type === 'ng') {
     e.zadanieNG = e.zadanieNG.filter(x => x !== recId);
+  } else {
+    e.zadanieSob = e.zadanieSob.filter(x => x !== recId);
   }
   markUnsaved();
   reRenderCard(wid);
@@ -1326,7 +1382,7 @@ function onDateChange() {
     state.entries[w.id] = {
       obecny: false, zmiana: w.zmianaDefault || '1 zmiana',
       nadgodziny: 0, kabina: w.kabinaDefault || null,
-      zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
+      zadanieDniowka: [], zadanieNG: [], pracaSob: false, nadgSob: 0, zadanieSob: [], notatki: '', _recordId: null
     };
   }
   clearUnsaved();
@@ -1393,7 +1449,7 @@ let _zadModal = { wid: null, type: null };
 async function openZadanieModal(wid, type) {
   _zadModal = { wid, type };
   const w = state.workers.find(x => x.id === wid);
-  const label = type === 'dn' ? 'dniówka' : 'nadgodziny';
+  const label = type === 'dn' ? 'dniówka' : type === 'ng' ? 'nadgodziny' : 'sobota';
   const eKab = (state.entries[wid] || {}).kabina || '';
   showModal(`Zadanie (${label}) — ${w ? w.name : ''}`,
     `<div style="display:flex;gap:8px;margin-bottom:10px;">
@@ -1431,7 +1487,7 @@ function renderZadanieList(filter='') {
   const list = document.getElementById('zad-list');
   if (!list) return;
   const e = state.entries[_zadModal.wid] || {};
-  const selected = _zadModal.type === 'dn' ? (e.zadanieDniowka || []) : (e.zadanieNG || []);
+  const selected = _zadModal.type === 'dn' ? (e.zadanieDniowka || []) : _zadModal.type === 'ng' ? (e.zadanieNG || []) : (e.zadanieSob || []);
   const fl = filter.toLowerCase();
   const kabFilter = document.getElementById('zad-kabina')?.value || '';
   const filtered = state.zadania.filter(z =>
@@ -1462,7 +1518,7 @@ function filterZadania() {
 
 function toggleZadanieSelect(zid) {
   const e = getEntry(_zadModal.wid);
-  const arr = _zadModal.type === 'dn' ? e.zadanieDniowka : e.zadanieNG;
+  const arr = _zadModal.type === 'dn' ? e.zadanieDniowka : _zadModal.type === 'ng' ? e.zadanieNG : e.zadanieSob;
   const idx = arr.indexOf(zid);
   if (idx === -1) arr.push(zid);
   else arr.splice(idx,1);
@@ -1537,7 +1593,7 @@ async function saveNewWorker() {
     state.workers.sort((a,b) => a.name.localeCompare(b.name, 'pl'));
     state.entries[r.id] = {
       obecny: false, zmiana, nadgodziny: 0, kabina: kabina || null,
-      zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
+      zadanieDniowka: [], zadanieNG: [], pracaSob: false, nadgSob: 0, zadanieSob: [], notatki: '', _recordId: null
     };
     renderWorkers();
     showToast(`Dodano: ${imie}`, 'success');
@@ -1581,16 +1637,16 @@ async function saveDay() {
       fields[CONFIG.F_D_KABINA] = e.kabina ? [e.kabina] : [];
 
       if (e.obecny) {
-        if (e.zadanieDniowka && e.zadanieDniowka.length > 0) {
-          fields[CONFIG.F_D_ZAD_DN] = e.zadanieDniowka;
-        }
-        if (e.zadanieNG && e.zadanieNG.length > 0 && e.nadgodziny > 0) {
-          fields[CONFIG.F_D_ZAD_NG] = e.zadanieNG;
-        }
+        fields[CONFIG.F_D_ZAD_DN] = e.zadanieDniowka || [];
+        fields[CONFIG.F_D_ZAD_NG] = (e.nadgodziny > 0) ? (e.zadanieNG || []) : [];
       } else {
         fields[CONFIG.F_D_ZAD_DN] = [];
         fields[CONFIG.F_D_ZAD_NG] = [];
       }
+      // Sobota — zawsze zapisuj (niezależnie od obecności)
+      fields[CONFIG.F_D_PRACA_SOB] = !!e.pracaSob;
+      fields[CONFIG.F_D_NADG_SOB] = e.pracaSob ? (e.nadgSob || 0) : 0;
+      fields[CONFIG.F_D_ZAD_SOB] = e.pracaSob ? (e.zadanieSob || []) : [];
 
       if (e._recordId) {
         toUpdate.push({ id: e._recordId, fields });
@@ -1693,7 +1749,7 @@ window.addEventListener('load', init);
 <!-- ── SERVICE WORKER ── -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw-zespol.js?v=6').catch(()=>{});
+  navigator.serviceWorker.register('sw-zespol.js?v=7').catch(()=>{});
 }
 </script>
 
