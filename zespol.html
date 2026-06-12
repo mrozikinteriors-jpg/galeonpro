@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#1a1714">
+<meta name="theme-color" content="#0a0908">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Zespół">
@@ -12,22 +12,23 @@
 <style>
 /* ── CONFIG ─────────────────────────────────────────── */
 :root {
-  --bg: #f5f2ed;
-  --surface: #ffffff;
-  --surface2: #f0ece5;
-  --border: #ddd8cf;
-  --text: #1a1714;
-  --muted: #8a8278;
-  --accent: #2b5c8a;
-  --accent-light: #e8f0f8;
-  --accent2: #c47d2e;
-  --accent2-light: #fdf3e7;
-  --danger: #c0392b;
-  --danger-light: #fdf0ef;
-  --green: #2d7a4f;
-  --green-light: #eaf4ef;
-  --yellow: #b8860b;
-  --yellow-light: #fefae8;
+  --bg: #12100e;
+  --surface: #1e1b18;
+  --surface2: #28241f;
+  --border: #3a352e;
+  --text: #ece8e1;
+  --muted: #93897c;
+  --accent: #5a96cc;
+  --accent-light: #1c2a38;
+  --accent2: #d99a4e;
+  --accent2-light: #332718;
+  --danger: #e06052;
+  --danger-light: #371d1a;
+  --green: #4eb579;
+  --green-light: #16291f;
+  --yellow: #d9b23b;
+  --yellow-light: #2e2812;
+  --topbar: #0a0908;
 }
 * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color: transparent; }
 body {
@@ -40,7 +41,7 @@ body {
 
 /* ── TOPBAR ── */
 .topbar {
-  background: var(--text);
+  background: var(--topbar);
   color: #fff;
   padding: 0 12px;
   min-height: 56px;
@@ -137,7 +138,7 @@ body {
   min-height: 44px;
 }
 .btn-primary { background: var(--accent); color: #fff; }
-.btn-primary:hover { background: #1e4266; }
+.btn-primary:hover { background: #3d7ab0; }
 .btn-ghost {
   background: transparent; color: var(--muted);
   border: 1.5px solid var(--border);
@@ -145,7 +146,7 @@ body {
 .btn-ghost:hover { color: var(--text); border-color: var(--text); }
 .btn-danger-ghost {
   background: var(--danger-light); color: var(--danger);
-  border: 1.5px solid #f5c6c2;
+  border: 1.5px solid #6e3a34;
 }
 .btn-sm { padding: 7px 12px; font-size: 10px; min-height: 36px; }
 .btn-block { width: 100%; justify-content: center; }
@@ -252,11 +253,11 @@ body {
 .zadanie-tag {
   display: inline-flex; align-items: center; gap: 6px;
   background: var(--accent-light); color: var(--accent);
-  border: 1px solid #b8d4ec; border-radius: 3px;
+  border: 1px solid #2e4d68; border-radius: 3px;
   padding: 3px 10px; font-size: 11px; font-weight: 600;
   max-width: 100%; flex-wrap: wrap;
 }
-.zadanie-tag.ng { background: var(--accent2-light); color: var(--accent2); border-color: #e8c48a; }
+.zadanie-tag.ng { background: var(--accent2-light); color: var(--accent2); border-color: #6b4e26; }
 .zadanie-clear {
   background: none; border: none; cursor: pointer;
   color: var(--muted); font-size: 13px; padding: 0; line-height: 1;
@@ -323,7 +324,7 @@ body {
   border: none; border-radius: 6px; cursor: pointer;
   transition: all .15s; min-height: 52px;
 }
-.btn-save:hover { background: #1e4266; }
+.btn-save:hover { background: #3d7ab0; }
 .btn-save:disabled { background: var(--border); color: var(--muted); cursor: not-allowed; }
 .btn-save.saving { background: var(--accent2); }
 
@@ -370,7 +371,7 @@ body {
   background: var(--bg); color: var(--text);
   outline: none; margin-bottom: 10px; min-height: 44px;
 }
-.task-search:focus { border-color: var(--accent); background: #fff; }
+.task-search:focus { border-color: var(--accent); background: var(--surface2); }
 .task-list { display: flex; flex-direction: column; gap: 4px; max-height: 50vh; overflow-y: auto; }
 .task-item {
   display: flex; align-items: flex-start; gap: 10px;
@@ -401,7 +402,7 @@ body {
   width: 100%; min-height: 44px;
 }
 .form-row input:focus, .form-row select:focus, .form-row textarea:focus {
-  border-color: var(--accent); background: #fff;
+  border-color: var(--accent); background: var(--surface2);
 }
 .form-row textarea { min-height: 80px; resize: vertical; }
 
@@ -409,7 +410,8 @@ body {
 .toast {
   position: fixed; bottom: 80px; left: 50%;
   transform: translateX(-50%) translateY(80px);
-  background: var(--text); color: #fff;
+  background: var(--surface2); color: var(--text);
+  border: 1px solid var(--border);
   padding: 12px 20px; border-radius: 5px;
   font-size: 12px; letter-spacing: .5px;
   z-index: 1000; transition: transform .3s ease;
@@ -528,8 +530,9 @@ body {
     </div>
   </div>
 
-  <!-- ADD WORKER -->
-  <div class="add-worker-row">
+  <!-- ADD WORKER + VIEW TOGGLE -->
+  <div class="add-worker-row" style="justify-content:space-between;">
+    <button class="btn btn-ghost btn-sm" id="btn-view-toggle" onclick="toggleViewMode()">🚪 Wg kabin</button>
     <button class="btn btn-ghost btn-sm" onclick="openAddWorker()">➕ Dodaj stolarza</button>
   </div>
 
@@ -584,6 +587,7 @@ const CONFIG = {
   T_DZIENNIK: 'tblDUwNznsWNSGPp1',
   T_DZIALY:   'tbl07n2EXw9ZOEpfA',
   T_JEDNOSTKI:'tblrEjt9JSPHTyOBo',
+  T_KABINY:   'tblfHINRFzeiRE4YW',
   T_ZADANIA:  'tblEKGgbKP8sZdbDZ',
 
   // Pola Zespol
@@ -591,12 +595,14 @@ const CONFIG = {
   F_Z_AKTYWNY: 'fldNgK1ibm7vWPQC8',
   F_Z_ROLA:    'fldRzmfXKKoOsNDfo',
   F_Z_ZMIANA:  'fldM5PzkstzjBR0dt',
+  F_Z_KABINA:  'fldirZffQxG1YD0lR',
   F_Z_NOTATKI: 'fld4MF9Tdo5icgQYs',
 
   // Pola Dziennik
   F_D_DATA:     'fldnfo4vq6INlGGsD',
   F_D_PRACOWNIK:'fldpjZmWtKgHzfNV8',
   F_D_JEDNOSTKA:'flddr254JB3Zb1p1Y',
+  F_D_KABINA:   'fldCsdvHqcFcN9lYD',
   F_D_OBECNY:   'fldf050rTaS8KduBR',
   F_D_ZMIANA:   'fldbDaIbifVn9IkQu',
   F_D_NADG:     'fldDeShoayJegnnSt',
@@ -617,9 +623,15 @@ const CONFIG = {
   F_J_NAZWA:  'fldmflxcb1MRnsDyH',
   F_J_STATUS: 'fldm63xznbAVhG1EU',
 
+  // Pola Kabiny
+  F_K_NAZWA: 'fld3bTjX3Sfl4Zkfw',
+  F_K_JEDN:  'fld0PvPmCvqh0WQKV',
+  F_K_KOLEJ: 'fldHD20ObDPdQQ7Hs',
+
   // Pola Zadania
   F_ZAD_NAZWA:    'fldIz7cevBB0lodSo',
   F_ZAD_JEDNOSTKA:'fldlgtgyoTpQ0w8tr',
+  F_ZAD_KABINA:   'fldK1YjPF4Hpc9hwx',
   F_ZAD_STREFA:   'flddKFNNANVMM7FZt',
   F_ZAD_STATUS:   'fldJ6nX3QPp6JRhyH',
 
@@ -644,6 +656,8 @@ let state = {
   dzialy: {},        // nazwadzialu → {liczba, nadgodziny, _recordId}
   zadania: [],       // cache zadań jednostki
   jednostki: [],     // cache jednostek W budowie
+  kabiny: [],        // cache kabin jednostki {id, name, kolej}
+  viewByCabin: false,
   unsaved: false
 };
 
@@ -779,7 +793,7 @@ function pinSkip() {
    ============================================================ */
 function openConfig(errorMsg) {
   const errHtml = errorMsg
-    ? `<div style="background:var(--danger-light);border:1px solid #f5c6c2;border-radius:4px;padding:10px 12px;font-size:12px;color:var(--danger);margin-bottom:12px;">${esc(errorMsg)}</div>`
+    ? `<div style="background:var(--danger-light);border:1px solid #6e3a34;border-radius:4px;padding:10px 12px;font-size:12px;color:var(--danger);margin-bottom:12px;">${esc(errorMsg)}</div>`
     : '';
   showModal('⚙ Ustawienia',
     `${errHtml}
@@ -886,6 +900,7 @@ async function loadData() {
   document.getElementById('workers-list').innerHTML = '<div class="loader">Ładowanie pracowników…</div>';
   try {
     await loadJednostki();
+    await loadKabiny();
     await loadWorkers();
     await loadExistingEntries();
     renderWorkers();
@@ -904,7 +919,7 @@ async function loadData() {
    ============================================================ */
 async function loadJednostki() {
   const records = await fetchAll(CONFIG.T_JEDNOSTKI, {
-    filterByFormula: `{${CONFIG.F_J_STATUS}} = "W budowie"`,
+    filterByFormula: `{Status} = "W budowie"`,
     fields: [CONFIG.F_J_NAZWA, CONFIG.F_J_STATUS]
   });
   state.jednostki = records.map(r => ({
@@ -930,7 +945,28 @@ function onUnitChange() {
   const found = state.jednostki.find(j => j.id === state.unitId);
   state.unitName = found ? found.name : '';
   state.zadania = []; // invalidate cache
-  loadExistingEntries().then(() => renderWorkers());
+  loadKabiny().then(() => loadExistingEntries()).then(() => renderWorkers());
+}
+
+/* ============================================================
+   KABINY
+   ============================================================ */
+async function loadKabiny() {
+  state.kabiny = [];
+  if (!state.unitName) return;
+  const records = await fetchAll(CONFIG.T_KABINY, {
+    filterByFormula: `{Jednostka} = "${state.unitName}"`,
+    fields: [CONFIG.F_K_NAZWA, CONFIG.F_K_KOLEJ]
+  });
+  state.kabiny = records.map(r => ({
+    id: r.id,
+    name: r.fields[CONFIG.F_K_NAZWA] || '(bez nazwy)',
+    kolej: r.fields[CONFIG.F_K_KOLEJ] ?? 999
+  })).sort((a,b) => a.kolej - b.kolej);
+}
+function kabinaName(id) {
+  const k = state.kabiny.find(k => k.id === id);
+  return k ? k.name : null;
 }
 
 /* ============================================================
@@ -938,9 +974,9 @@ function onUnitChange() {
    ============================================================ */
 async function loadWorkers() {
   const records = await fetchAll(CONFIG.T_ZESPOL, {
-    filterByFormula: `{${CONFIG.F_Z_AKTYWNY}} = 1`,
+    filterByFormula: `{Aktywny} = 1`,
     sort: [{ field: CONFIG.F_Z_IMIE, direction: 'asc' }],
-    fields: [CONFIG.F_Z_IMIE, CONFIG.F_Z_ROLA, CONFIG.F_Z_ZMIANA, CONFIG.F_Z_AKTYWNY]
+    fields: [CONFIG.F_Z_IMIE, CONFIG.F_Z_ROLA, CONFIG.F_Z_ZMIANA, CONFIG.F_Z_AKTYWNY, CONFIG.F_Z_KABINA]
   });
 
   state.workers = [];
@@ -955,7 +991,8 @@ async function loadWorkers() {
       id: r.id,
       name,
       rola: r.fields[CONFIG.F_Z_ROLA] || 'Stolarz',
-      zmianaDefault: r.fields[CONFIG.F_Z_ZMIANA] || '1 zmiana'
+      zmianaDefault: r.fields[CONFIG.F_Z_ZMIANA] || '1 zmiana',
+      kabinaDefault: (r.fields[CONFIG.F_Z_KABINA] || [])[0] || null
     });
   }
 
@@ -966,6 +1003,7 @@ async function loadWorkers() {
         obecny: true,
         zmiana: w.zmianaDefault || '1 zmiana',
         nadgodziny: 0,
+        kabina: w.kabinaDefault || null,
         zadanieDniowka: [],
         zadanieNG: [],
         notatki: '',
@@ -982,9 +1020,9 @@ async function loadExistingEntries() {
   if (!state.unitId) return;
   const dateStr = airtableDate(state.date);
   const records = await fetchAll(CONFIG.T_DZIENNIK, {
-    filterByFormula: `{${CONFIG.F_D_DATA}} = "${dateStr}"`,
+    filterByFormula: `IS_SAME({Data}, "${dateStr}", 'day')`,
     fields: [
-      CONFIG.F_D_DATA, CONFIG.F_D_PRACOWNIK, CONFIG.F_D_JEDNOSTKA,
+      CONFIG.F_D_DATA, CONFIG.F_D_PRACOWNIK, CONFIG.F_D_JEDNOSTKA, CONFIG.F_D_KABINA,
       CONFIG.F_D_OBECNY, CONFIG.F_D_ZMIANA, CONFIG.F_D_NADG,
       CONFIG.F_D_ZAD_DN, CONFIG.F_D_ZAD_NG, CONFIG.F_D_NOTATKI
     ]
@@ -1004,6 +1042,7 @@ async function loadExistingEntries() {
       obecny: !!r.fields[CONFIG.F_D_OBECNY],
       zmiana: r.fields[CONFIG.F_D_ZMIANA] || worker.zmianaDefault || '1 zmiana',
       nadgodziny: r.fields[CONFIG.F_D_NADG] || 0,
+      kabina: (r.fields[CONFIG.F_D_KABINA] || [])[0] || worker.kabinaDefault || null,
       zadanieDniowka: r.fields[CONFIG.F_D_ZAD_DN] || [],
       zadanieNG: r.fields[CONFIG.F_D_ZAD_NG] || [],
       notatki: r.fields[CONFIG.F_D_NOTATKI] || '',
@@ -1013,7 +1052,7 @@ async function loadExistingEntries() {
 
   // Also load existing dzialy records
   const dzialyRec = await fetchAll(CONFIG.T_DZIALY, {
-    filterByFormula: `{${CONFIG.F_DZ_DATA}} = "${dateStr}"`,
+    filterByFormula: `IS_SAME({Data}, "${dateStr}", 'day')`,
     fields: [CONFIG.F_DZ_DATA, CONFIG.F_DZ_DZIAL, CONFIG.F_DZ_JEDN, CONFIG.F_DZ_LICZBA, CONFIG.F_DZ_NADG, CONFIG.F_DZ_NOTATKI]
   });
   for (const r of dzialyRec) {
@@ -1037,8 +1076,73 @@ function renderWorkers() {
     el.innerHTML = '<div class="empty">Brak aktywnych pracowników.<br>Dodaj stolarza przyciskiem powyżej.</div>';
     return;
   }
-  el.innerHTML = state.workers.map(w => workerCard(w)).join('');
+  if (state.viewByCabin) {
+    const groups = {};
+    for (const w of state.workers) {
+      const key = kabinaName((state.entries[w.id]||{}).kabina) || '— bez kabiny —';
+      (groups[key] = groups[key] || []).push(w);
+    }
+    const order = state.kabiny.map(k => k.name).concat(['— bez kabiny —']);
+    const seen = new Set(order);
+    Object.keys(groups).forEach(k => { if (!seen.has(k)) order.push(k); });
+    el.innerHTML = order.filter(k => groups[k]).map(k =>
+      `<div style="font-family:'Syne',sans-serif;font-weight:800;font-size:12px;letter-spacing:1.5px;text-transform:uppercase;color:var(--accent2);margin:16px 0 8px;">${esc(k)} · ${groups[k].length}</div>` +
+      groups[k].map(w => workerCard(w)).join('')
+    ).join('');
+  } else {
+    el.innerHTML = state.workers.map(w => workerCard(w)).join('');
+  }
   updateSummary();
+}
+
+function toggleViewMode() {
+  state.viewByCabin = !state.viewByCabin;
+  document.getElementById('btn-view-toggle').textContent = state.viewByCabin ? '👥 A–Z' : '🚪 Wg kabin';
+  renderWorkers();
+}
+
+/* ============================================================
+   KABINA MODAL
+   ============================================================ */
+let _kabModal = { wid: null };
+function openKabinaModal(wid) {
+  _kabModal.wid = wid;
+  const w = state.workers.find(x => x.id === wid);
+  const e = getEntry(wid);
+  const items = [{ id: '', name: '— brak —' }].concat(state.kabiny);
+  showModal(`Kabina — ${w ? w.name : ''}`,
+    `<div class="task-list">${items.map(k => {
+      const sel = (e.kabina || '') === k.id;
+      return `<div class="task-item ${sel?'selected':''}" onclick="pickKabina('${k.id}')">
+        <span class="task-item-check">${sel?'☑':'☐'}</span>
+        <div class="task-item-body"><div class="task-item-name">${esc(k.name)}</div></div>
+      </div>`;
+    }).join('')}</div>
+    <label style="display:flex;align-items:center;gap:10px;margin-top:12px;font-size:12px;min-height:44px;cursor:pointer;">
+      <input type="checkbox" id="kab-perm" style="width:20px;height:20px;"> ustaw jako stałą kabinę pracownika
+    </label>`,
+    `<button class="btn btn-ghost" onclick="closeModal()">Zamknij</button>`
+  );
+}
+async function pickKabina(kid) {
+  const wid = _kabModal.wid;
+  const e = getEntry(wid);
+  e.kabina = kid || null;
+  const perm = document.getElementById('kab-perm')?.checked;
+  closeModal();
+  markUnsaved();
+  reRenderCard(wid);
+  if (state.viewByCabin) renderWorkers();
+  if (perm) {
+    try {
+      await api('PATCH', `${CONFIG.T_ZESPOL}/${wid}`, { fields: { [CONFIG.F_Z_KABINA]: kid ? [kid] : [] } });
+      const w = state.workers.find(x => x.id === wid);
+      if (w) w.kabinaDefault = kid || null;
+      showToast('Stała kabina zaktualizowana', 'success');
+    } catch(err) {
+      showToast('Błąd zapisu stałej kabiny: ' + err.message, 'error');
+    }
+  }
 }
 
 function workerCard(w) {
@@ -1076,6 +1180,10 @@ function workerCard(w) {
           <span class="stepper-val" id="nadg-val-${w.id}">${nadg}</span>
           <button onclick="changeNadg('${w.id}',0.5)">+</button>
         </div>
+      </div>
+      <div class="detail-row">
+        <span class="detail-label">Kabina</span>
+        <button class="btn-zadanie" onclick="openKabinaModal('${w.id}')">🚪 ${esc(kabinaName(e.kabina) || 'Wybierz kabinę')}</button>
       </div>
       <div class="detail-row">
         <span class="detail-label">Zadanie dniówka</span>
@@ -1140,7 +1248,8 @@ function getEntry(wid) {
     state.entries[wid] = {
       obecny: true,
       zmiana: w ? (w.zmianaDefault || '1 zmiana') : '1 zmiana',
-      nadgodziny: 0, zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
+      nadgodziny: 0, kabina: w ? (w.kabinaDefault || null) : null,
+      zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
     };
   }
   return state.entries[wid];
@@ -1216,7 +1325,8 @@ function onDateChange() {
   for (const w of state.workers) {
     state.entries[w.id] = {
       obecny: true, zmiana: w.zmianaDefault || '1 zmiana',
-      nadgodziny: 0, zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
+      nadgodziny: 0, kabina: w.kabinaDefault || null,
+      zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
     };
   }
   clearUnsaved();
@@ -1284,8 +1394,15 @@ async function openZadanieModal(wid, type) {
   _zadModal = { wid, type };
   const w = state.workers.find(x => x.id === wid);
   const label = type === 'dn' ? 'dniówka' : 'nadgodziny';
+  const eKab = (state.entries[wid] || {}).kabina || '';
   showModal(`Zadanie (${label}) — ${w ? w.name : ''}`,
-    `<input class="task-search" id="zad-search" placeholder="Szukaj zadania…" oninput="filterZadania()" autofocus>
+    `<div style="display:flex;gap:8px;margin-bottom:10px;">
+       <input class="task-search" id="zad-search" placeholder="Szukaj zadania…" oninput="filterZadania()" style="margin-bottom:0;flex:1;">
+       <select id="zad-kabina" onchange="filterZadania()" style="max-width:42%;background:var(--bg);border:1.5px solid var(--border);color:var(--text);border-radius:4px;font-family:'Inconsolata',monospace;font-size:12px;min-height:44px;">
+         <option value="">Wszystkie kabiny</option>
+         ${state.kabiny.map(k => `<option value="${esc(k.id)}" ${eKab===k.id?'selected':''}>${esc(k.name)}</option>`).join('')}
+       </select>
+     </div>
      <div class="task-list" id="zad-list"><div class="loader">Ładowanie…</div></div>`,
     `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
      <button class="btn btn-primary" onclick="confirmZadania()">Zapisz wybór</button>`
@@ -1299,13 +1416,13 @@ async function openZadanieModal(wid, type) {
 async function loadZadania() {
   if (!state.unitId) return;
   const records = await fetchAll(CONFIG.T_ZADANIA, {
-    filterByFormula: `AND({${CONFIG.F_ZAD_JEDNOSTKA}} = "${state.unitId}", {${CONFIG.F_ZAD_STATUS}} != "Gotowe")`,
-    fields: [CONFIG.F_ZAD_NAZWA, CONFIG.F_ZAD_STREFA, CONFIG.F_ZAD_STATUS]
+    filterByFormula: `AND({Jednostka} = "${state.unitName}", {Status} != "Gotowe")`,
+    fields: [CONFIG.F_ZAD_NAZWA, CONFIG.F_ZAD_KABINA, CONFIG.F_ZAD_STATUS]
   });
   state.zadania = records.map(r => ({
     id: r.id,
     name: r.fields[CONFIG.F_ZAD_NAZWA] || '(bez nazwy)',
-    strefa: r.fields[CONFIG.F_ZAD_STREFA] || '',
+    kabina: (r.fields[CONFIG.F_ZAD_KABINA] || [])[0] || null,
     status: r.fields[CONFIG.F_ZAD_STATUS] || ''
   }));
 }
@@ -1316,18 +1433,23 @@ function renderZadanieList(filter='') {
   const e = state.entries[_zadModal.wid] || {};
   const selected = _zadModal.type === 'dn' ? (e.zadanieDniowka || []) : (e.zadanieNG || []);
   const fl = filter.toLowerCase();
-  const filtered = state.zadania.filter(z => !fl || z.name.toLowerCase().includes(fl) || z.strefa.toLowerCase().includes(fl));
+  const kabFilter = document.getElementById('zad-kabina')?.value || '';
+  const filtered = state.zadania.filter(z =>
+    (!kabFilter || z.kabina === kabFilter) &&
+    (!fl || z.name.toLowerCase().includes(fl))
+  );
   if (filtered.length === 0) {
     list.innerHTML = '<div class="empty">Brak zadań.</div>';
     return;
   }
   list.innerHTML = filtered.map(z => {
     const sel = selected.includes(z.id);
+    const kn = kabinaName(z.kabina);
     return `<div class="task-item ${sel?'selected':''}" onclick="toggleZadanieSelect('${z.id}')">
       <span class="task-item-check">${sel?'☑':'☐'}</span>
       <div class="task-item-body">
         <div class="task-item-name">${esc(z.name)}</div>
-        ${z.strefa ? `<div class="task-item-meta">${esc(z.strefa)} · ${esc(z.status)}</div>` : ''}
+        <div class="task-item-meta">${kn ? esc(kn)+' · ' : ''}${esc(z.status)}</div>
       </div>
     </div>`;
   }).join('');
@@ -1378,6 +1500,13 @@ function openAddWorker() {
          <option value="1 zmiana">1 zmiana</option>
          <option value="2 zmiana">2 zmiana</option>
        </select>
+     </div>
+     <div class="form-row">
+       <label>Kabina (opcjonalnie)</label>
+       <select id="new-kabina">
+         <option value="">—</option>
+         ${state.kabiny.map(k => `<option value="${esc(k.id)}">${esc(k.name)}</option>`).join('')}
+       </select>
      </div>`,
     `<button class="btn btn-ghost" onclick="closeModal()">Anuluj</button>
      <button class="btn btn-primary" onclick="saveNewWorker()">Dodaj</button>`
@@ -1391,24 +1520,23 @@ async function saveNewWorker() {
   }
   const rola = document.getElementById('new-rola')?.value || 'Stolarz';
   const zmiana = document.getElementById('new-zmiana')?.value || '1 zmiana';
+  const kabina = document.getElementById('new-kabina')?.value || '';
   closeModal();
   try {
-    const res = await api('POST', CONFIG.T_ZESPOL, {
-      records: [{
-        fields: {
-          [CONFIG.F_Z_IMIE]: imie,
-          [CONFIG.F_Z_AKTYWNY]: true,
-          [CONFIG.F_Z_ROLA]: rola,
-          [CONFIG.F_Z_ZMIANA]: zmiana
-        }
-      }]
-    });
+    const fields = {
+      [CONFIG.F_Z_IMIE]: imie,
+      [CONFIG.F_Z_AKTYWNY]: true,
+      [CONFIG.F_Z_ROLA]: rola,
+      [CONFIG.F_Z_ZMIANA]: zmiana
+    };
+    if (kabina) fields[CONFIG.F_Z_KABINA] = [kabina];
+    const res = await api('POST', CONFIG.T_ZESPOL, { records: [{ fields }] });
     const r = res.records[0];
-    const newW = { id: r.id, name: imie, rola, zmianaDefault: zmiana };
+    const newW = { id: r.id, name: imie, rola, zmianaDefault: zmiana, kabinaDefault: kabina || null };
     state.workers.push(newW);
-    state.workers.sort((a,b) => a.name.localeCompare(b.name));
+    state.workers.sort((a,b) => a.name.localeCompare(b.name, 'pl'));
     state.entries[r.id] = {
-      obecny: true, zmiana, nadgodziny: 0,
+      obecny: true, zmiana, nadgodziny: 0, kabina: kabina || null,
       zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
     };
     renderWorkers();
@@ -1450,6 +1578,7 @@ async function saveDay() {
       if (state.unitId) {
         fields[CONFIG.F_D_JEDNOSTKA] = [state.unitId];
       }
+      fields[CONFIG.F_D_KABINA] = e.kabina ? [e.kabina] : [];
 
       if (e.obecny) {
         if (e.zadanieDniowka && e.zadanieDniowka.length > 0) {
@@ -1564,7 +1693,7 @@ window.addEventListener('load', init);
 <!-- ── SERVICE WORKER ── -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw-zespol.js?v=5').catch(()=>{});
+  navigator.serviceWorker.register('sw-zespol.js?v=6').catch(()=>{});
 }
 </script>
 
