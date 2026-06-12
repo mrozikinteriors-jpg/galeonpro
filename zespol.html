@@ -1000,7 +1000,7 @@ async function loadWorkers() {
   for (const w of state.workers) {
     if (!state.entries[w.id]) {
       state.entries[w.id] = {
-        obecny: true,
+        obecny: false,
         zmiana: w.zmianaDefault || '1 zmiana',
         nadgodziny: 0,
         kabina: w.kabinaDefault || null,
@@ -1246,7 +1246,7 @@ function getEntry(wid) {
   if (!state.entries[wid]) {
     const w = state.workers.find(x => x.id === wid);
     state.entries[wid] = {
-      obecny: true,
+      obecny: false,
       zmiana: w ? (w.zmianaDefault || '1 zmiana') : '1 zmiana',
       nadgodziny: 0, kabina: w ? (w.kabinaDefault || null) : null,
       zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
@@ -1324,7 +1324,7 @@ function onDateChange() {
   state.dzialy = {};
   for (const w of state.workers) {
     state.entries[w.id] = {
-      obecny: true, zmiana: w.zmianaDefault || '1 zmiana',
+      obecny: false, zmiana: w.zmianaDefault || '1 zmiana',
       nadgodziny: 0, kabina: w.kabinaDefault || null,
       zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
     };
@@ -1536,7 +1536,7 @@ async function saveNewWorker() {
     state.workers.push(newW);
     state.workers.sort((a,b) => a.name.localeCompare(b.name, 'pl'));
     state.entries[r.id] = {
-      obecny: true, zmiana, nadgodziny: 0, kabina: kabina || null,
+      obecny: false, zmiana, nadgodziny: 0, kabina: kabina || null,
       zadanieDniowka: [], zadanieNG: [], notatki: '', _recordId: null
     };
     renderWorkers();
