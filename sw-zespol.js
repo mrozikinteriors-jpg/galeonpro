@@ -1,4 +1,4 @@
-const CACHE = 'zespol-v8';
+const CACHE = 'zespol-v9-20260712';
 // Cache only fonts — HTML zawsze z sieci
 const FONT_CACHE = [
   'https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inconsolata:wght@300;400;500&display=swap'
