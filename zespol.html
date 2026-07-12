@@ -7,10 +7,10 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Zespół">
-<link rel="manifest" href="manifest-zespol.json?v=20260712-v10">
+<link rel="manifest" href="manifest-zespol.json?v=20260712-v11">
 <title>Zespół — Galeon</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Inconsolata:wght@300;400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="journal-zespol.css?v=20260712-v10">
+<link rel="stylesheet" href="journal-zespol.css?v=20260712-v11">
 <style>
 /* ── CONFIG ─────────────────────────────────────────── */
 :root {
@@ -335,7 +335,7 @@ body {
   position: fixed; inset: 0;
   background: rgba(26,23,20,.65);
   backdrop-filter: blur(3px);
-  z-index: 500; display: none;
+  z-index: 900; display: none;
   align-items: flex-end; justify-content: center;
 }
 .overlay.open { display: flex; }
@@ -495,7 +495,7 @@ body {
   <div class="topbar-right">
     <div class="unsaved-dot" id="unsaved-dot" title="Niezapisane zmiany"></div>
     <span style="font-size:10px;color:var(--muted);letter-spacing:1px;" id="topbar-date"></span>
-    <span style="font-size:10px;color:var(--accent2);letter-spacing:1px;">v10</span>
+    <span style="font-size:10px;color:var(--accent2);letter-spacing:1px;">v11</span>
     <button class="topbar-btn" onclick="openConfig()" title="Ustawienia">⚙</button>
   </div>
 </div>
@@ -1749,12 +1749,12 @@ function showToast(msg, type='') {
 window.addEventListener('load', init);
 </script>
 
-<script src="journal-zespol.js?v=20260712-v10"></script>
+<script src="journal-zespol.js?v=20260712-v11"></script>
 
 <!-- ── SERVICE WORKER ── -->
 <script>
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw-zespol.js?v=20260712-v10').catch(()=>{});
+  navigator.serviceWorker.register('sw-zespol.js?v=20260712-v11').catch(()=>{});
 }
 </script>
 

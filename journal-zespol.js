@@ -1,7 +1,7 @@
 (function () {
-  const JOURNAL_VERSION = 'v10';
-  const STORAGE_PREFIX = 'zespol_worker_journal_v10';
-  const NOTE_START = '--- DZIENNIK PRACOWNIKA v10 ---';
+  const JOURNAL_VERSION = 'v11';
+  const STORAGE_PREFIX = 'zespol_worker_journal_v11';
+  const NOTE_START = '--- DZIENNIK PRACOWNIKA v11 ---';
   const NOTE_END = '--- KONIEC DZIENNIKA PRACOWNIKA ---';
 
   const RECEIVER_DEPARTMENTS = [

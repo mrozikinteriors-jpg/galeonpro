@@ -4,7 +4,7 @@ Data analizy: 2026-07-12
 
 ## Adresy aplikacji
 
-- Aplikacja mobilna Zespol: https://mrozikinteriors-jpg.github.io/galeonpro/zespol.html?v=20260712-v10
+- Aplikacja mobilna Zespol: https://mrozikinteriors-jpg.github.io/galeonpro/zespol.html?v=20260712-v11
 - Adres glowny repo: https://mrozikinteriors-jpg.github.io/galeonpro/
 - Panel/prototyp PD: https://mrozikinteriors-jpg.github.io/galeonpro/galeon-panel.html
 
